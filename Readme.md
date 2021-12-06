@@ -10,7 +10,7 @@ pip install shared_memory_wrapper
 
 ### How to use?
 ```python
-from shared_memory_wrapper import from_shared_memory, to_shared_memory, free_memory
+from shared_memory_wrapper import from_shared_memory, to_shared_memory, free_memory, remove_shared_memory_in_session
 ```
 
 All objects that follow these rules can be put into shared memory:
@@ -34,5 +34,8 @@ o = from_shared_memoryh(SomeClass, "myname")
 
 # Important if you don't want to have arrays taking up memory, always call after finishing:
 free_memory()
+
+# Alternatively, remove only the shared memory created in this process:
+remove_shared_memory_in_session()
 ```
 

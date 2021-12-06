@@ -2,7 +2,7 @@ from setuptools import setup
 from distutils.core import setup
 
 setup(name='shared_memory_wrapper',
-      version='0.0.1',
+      version='0.0.3',
       description='Shared Memory Wrapper',
       url='http://github.com/ivargr/shared_memory_wrapper',
       author='Ivar Grytten',
