@@ -97,7 +97,8 @@ def _object_to_shared_memory(object, name, use_python_backend=False):
         if not hasattr(object, variable_name):
             variable_name = "_" + variable_name
             if not(hasattr(object, variable_name)):
-                raise Exception("Object %s has init argument %s, but no property with the same name" % (object, variable_name))
+                logging.warning("Object %s has init argument %s, but no property with the same name. Ignoring" % (object, variable_name))
+                continue
 
         variable_data = getattr(object, variable_name)
         shared_memory_name = name + "-" + variable_name

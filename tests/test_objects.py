@@ -40,10 +40,27 @@ def test2():
 
     assert a2._object._number == 100
     assert a2._object._object.b == 3.0
-    assert a2._object._array[0] == 1
+    a2._object._array[0] = 10
+    assert a2._object._array[0] == 10
+
+def test_counter():
+    from npstructures import Counter, HashTable
+    from npstructures.raggedarray import RaggedArray, RaggedShape
+
+
+    counter = Counter([1,2, 3])
+    name = object_to_shared_memory(counter)
+    counter2 = object_from_shared_memory(name)
+
+    counter.count([1, 2, 3])
+    counter2.count([1,  2, 3])
+
+    assert np.all(counter[1, 2, 3] == counter2[1, 2, 3])
+
 
 test()
 test2()
+test_counter()
 
 
 
