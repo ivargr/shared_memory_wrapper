@@ -10,6 +10,7 @@ from itertools import repeat
 from pathos.multiprocessing import Pool
 import inspect
 from . import python_shared_memory
+from collections import OrderedDict
 
 
 class SingleSharedArray:
@@ -65,6 +66,78 @@ def array_to_shared_memory(name, array):
     SHARED_MEMORIES_IN_SESSION.append(name)
 
 
+def base_type_to_shared_memory(object, name):
+    # base types (strings, ints etc) are just pickled for simplicity
+    with open("." + name + ".shm", "wb") as f:
+        pickle.dump(object, f)
+
+
+def base_type_from_shared_memory(name):
+    with open("." + name + ".shm", "rb") as f:
+        return pickle.load(f)
+
+
+def object_to_shared_memory(object, base_name=None, use_python_backend=False):
+    if base_name is None:
+        random_generator = random.Random()  # create new generator so seed does not affect
+        base_name = str(random_generator.randint(0, 10e15))
+
+    description = _object_to_shared_memory(object, base_name, use_python_backend=use_python_backend)
+    description = (object.__class__, description)
+    with open("." + base_name + ".shm", "wb") as f:
+        pickle.dump(description, f)
+
+    return base_name
+
+
+def _object_to_shared_memory(object, name, use_python_backend=False):
+    variable_names = _get_object_init_arguments(object)
+    description = OrderedDict()
+    for variable_name in variable_names:
+        if not hasattr(object, variable_name):
+            variable_name = "_" + variable_name
+            if not(hasattr(object, variable_name)):
+                raise Exception("Object %s has init argument %s, but no property with the same name" % (object, variable_name))
+
+        variable_data = getattr(object, variable_name)
+        shared_memory_name = name + "-" + variable_name
+        if isinstance(variable_data, int) or isinstance(variable_data, str) or isinstance(variable_data, float):
+            base_type_to_shared_memory(variable_data, shared_memory_name)
+            description[variable_name] = ("pickle", None)
+        elif isinstance(variable_data, np.ndarray):
+            array_to_shared_memory(shared_memory_name, variable_data)
+            description[variable_name] = ("ndarray", None)
+        else:
+            # try to save this object recursively to shared memory
+            desc = _object_to_shared_memory(variable_data, shared_memory_name)
+            description[variable_name] = (variable_data.__class__, desc)
+
+    return description
+
+
+def object_from_shared_memory(name):
+    with open("." + name + ".shm", "rb") as f:
+        cls, description = pickle.load(f)
+
+    return _object_from_shared_memory(name, cls, description)
+
+
+def _object_from_shared_memory(name, cls, description):
+    data = []
+    for attribute, attribute_description in description.items():
+        attribute_type = attribute_description[0]
+        shared_memory_name = name + "-" + attribute
+        if attribute_type == "pickle":
+            data.append(base_type_from_shared_memory(shared_memory_name))
+        elif attribute_type == "ndarray":
+            data.append(array_from_shared_memory(shared_memory_name))
+        else:
+            # attribute is object
+            data.append(_object_from_shared_memory(shared_memory_name, attribute_type, attribute_description[1]))
+
+    return cls(*data)
+
+
 def from_shared_memory(cls, name, use_python_backend=False):
     property_names = _get_class_init_arguments(cls)
 
@@ -90,6 +163,7 @@ def to_shared_memory(object, name=None, use_python_backend=False):
     if name is None:
         random_generator = random.Random()  # create new generator so seed does not affect
         name = str(random_generator.randint(0,10e15))
+
 
     # write each instance variable to shared memory
     variables = _get_object_init_arguments(object)
