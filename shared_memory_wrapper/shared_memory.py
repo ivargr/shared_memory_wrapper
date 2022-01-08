@@ -50,19 +50,34 @@ def _get_object_init_arguments(object):
     arguments.remove("self")
     return arguments
 
-def array_from_shared_memory(name):
-    return sa.attach(name)
+def array_from_shared_memory(name, backend="shared_array"):
+    if backend == "shared_array":
+        return sa.attach(name)
+    elif backend == "python":
+        return python_shared_memory.np_array_from_shared_memory(name)
+    elif backend == "file":
+        return np.load("." + name + ".npy")
+    else:
+        raise Exception("Invalid backend %s" % backend)
 
 
-def array_to_shared_memory(name, array):
+def array_to_shared_memory(name, array, backend):
     global SHARED_MEMORIES_IN_SESSION
-    try:
-        sa.delete(name)
-    except FileNotFoundError:
-        pass
+    if backend == "shared_array":
+        try:
+            sa.delete(name)
+        except FileNotFoundError:
+            pass
 
-    shared_array = sa.create(name, array.shape, array.dtype)
-    shared_array[:] = array
+        shared_array = sa.create(name, array.shape, array.dtype)
+        shared_array[:] = array
+    elif backend == "python":
+        python_shared_memory.np_array_to_shared_memory(name, array)
+    elif backend == "file":
+        np.save("." + name + ".npy", array)
+    else:
+        raise Exception("Invalid backend %s" % backend)
+
     SHARED_MEMORIES_IN_SESSION.append(name)
 
 
@@ -77,12 +92,12 @@ def base_type_from_shared_memory(name):
         return pickle.load(f)
 
 
-def object_to_shared_memory(object, base_name=None, use_python_backend=False):
+def object_to_shared_memory(object, base_name=None, backend="shared_array"):
     if base_name is None:
         random_generator = random.Random()  # create new generator so seed does not affect
         base_name = str(random_generator.randint(0, 10e15))
 
-    description = _object_to_shared_memory(object, base_name, use_python_backend=use_python_backend)
+    description = _object_to_shared_memory(object, base_name, backend)
     description = (object.__class__, description)
     with open("." + base_name + ".shm", "wb") as f:
         pickle.dump(description, f)
@@ -90,7 +105,7 @@ def object_to_shared_memory(object, base_name=None, use_python_backend=False):
     return base_name
 
 
-def _object_to_shared_memory(object, name, use_python_backend=False):
+def _object_to_shared_memory(object, name, backend="shared_array"):
     variable_names = _get_object_init_arguments(object)
     description = OrderedDict()
     for variable_name in variable_names:
@@ -106,24 +121,24 @@ def _object_to_shared_memory(object, name, use_python_backend=False):
             base_type_to_shared_memory(variable_data, shared_memory_name)
             description[variable_name] = ("pickle", None)
         elif isinstance(variable_data, np.ndarray):
-            array_to_shared_memory(shared_memory_name, variable_data)
+            array_to_shared_memory(shared_memory_name, variable_data, backend)
             description[variable_name] = ("ndarray", None)
         else:
             # try to save this object recursively to shared memory
-            desc = _object_to_shared_memory(variable_data, shared_memory_name)
+            desc = _object_to_shared_memory(variable_data, shared_memory_name, backend)
             description[variable_name] = (variable_data.__class__, desc)
 
     return description
 
 
-def object_from_shared_memory(name):
+def object_from_shared_memory(name, backend="shared_array"):
     with open("." + name + ".shm", "rb") as f:
         cls, description = pickle.load(f)
 
-    return _object_from_shared_memory(name, cls, description)
+    return _object_from_shared_memory(name, cls, description, backend)
 
 
-def _object_from_shared_memory(name, cls, description):
+def _object_from_shared_memory(name, cls, description, backend="shared_array"):
     data = []
     for attribute, attribute_description in description.items():
         attribute_type = attribute_description[0]
@@ -131,10 +146,10 @@ def _object_from_shared_memory(name, cls, description):
         if attribute_type == "pickle":
             data.append(base_type_from_shared_memory(shared_memory_name))
         elif attribute_type == "ndarray":
-            data.append(array_from_shared_memory(shared_memory_name))
+            data.append(array_from_shared_memory(shared_memory_name, backend))
         else:
             # attribute is object
-            data.append(_object_from_shared_memory(shared_memory_name, attribute_type, attribute_description[1]))
+            data.append(_object_from_shared_memory(shared_memory_name, attribute_type, attribute_description[1], backend))
 
     return cls(*data)
 

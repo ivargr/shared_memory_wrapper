@@ -2,11 +2,16 @@ import logging
 logging.basicConfig(level=logging.INFO)
 import numpy as np
 from shared_memory_wrapper.shared_memory import object_to_shared_memory, object_from_shared_memory
+from shared_memory_wrapper import free_memory_in_session
 
 
 class B:
     def __init__(self, array):
         self._array = array
+
+    def __eq__(self, other):
+        return np.all(self._array == other._array)
+
 
 class A:
     def __init__(self, number, object, array):
@@ -14,12 +19,23 @@ class A:
         self._object = object
         self._array = array
 
+    def __eq__(self, other):
+        return self._number == other._number and \
+            self._object == other._object and \
+            np.all(self._array == other._array)
 
 
 class C:
     def __init__(self, string, b):
         self._string = string
         self.b = b
+
+    def __eq__(self, other):
+        return self._string == other._string and self.b == other.b
+
+
+def _get_dummy_object():
+    return A(100, A(100, C("hello", 3.0), np.array([1])), np.array([1, 2, 3], dtype=float))
 
 
 def test():
@@ -58,10 +74,20 @@ def test_counter():
     assert np.all(counter[1, 2, 3] == counter2[1, 2, 3])
 
 
+def test_various_backends():
+
+    for backend in ["shared_array", "python", "file"]:
+        print(backend)
+        a = _get_dummy_object()
+        name = object_to_shared_memory(a, backend="file")
+        a2 = object_from_shared_memory(name, backend="file")
+        assert a2 == a
+
+
 test()
 test2()
 test_counter()
+test_various_backends()
 
-
-
+free_memory_in_session()
 
