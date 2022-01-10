@@ -106,6 +106,7 @@ def array_to_shared_memory(name, array, backend):
 
         shared_array = sa.create(name, array.shape, array.dtype)
         shared_array[:] = array
+        SHARED_MEMORIES_IN_SESSION.append(name)
     elif backend == "python":
         python_shared_memory.np_array_to_shared_memory(name, array)
     elif backend == "file":
@@ -113,7 +114,6 @@ def array_to_shared_memory(name, array, backend):
     else:
         raise Exception("Invalid backend %s" % backend)
 
-    SHARED_MEMORIES_IN_SESSION.append(name)
 
 
 def base_type_to_shared_memory(object, name):

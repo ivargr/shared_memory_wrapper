@@ -54,11 +54,11 @@ def test_object_to_from_shared_memory_using_python_backend():
     print("Done")
 
 def test_to_shared_memory_without_name():
-
     object = A(np.array([1, 2, 3]), np.array([10.5, 3.0]), np.array([10, 10], dtype=np.uint8))
     name = to_shared_memory(object)
     object2 = from_shared_memory(A, name)
     assert np.all(object2.a == object.a)
+
 
 test_to_and_from_shared_memory()
 test_object_init_arguments()
