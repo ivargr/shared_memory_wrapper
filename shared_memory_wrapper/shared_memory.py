@@ -131,7 +131,7 @@ def from_file(name):
     return object_from_shared_memory(name, "file")
 
 
-def to_file(object, base_name=False):
+def to_file(object, base_name=None):
     return object_to_shared_memory(object, base_name, backend="file")
 
 
@@ -141,6 +141,12 @@ def object_to_shared_memory(object, base_name=None, backend="shared_array"):
         base_name = str(random_generator.randint(0, 10e15))
 
     data_bundle = DataBundle(base_name, backend)
+
+    if "/" in base_name:
+        logging.info("Base name is a file path: %s" % base_name)
+        base_name = base_name.split("/")[-1]
+        logging.info("Using last par of file path as base name: %s" % base_name)
+
     description = _object_to_shared_memory(object, base_name, data_bundle, backend)
     description = (object.__class__, description)
     data_bundle.save(description)
@@ -181,6 +187,11 @@ def _object_to_shared_memory(object, name, data_bundle, backend="shared_array"):
 def object_from_shared_memory(name, backend="shared_array"):
     data_bundle = np.load(name + ".npz", allow_pickle=True)
     cls, description = data_bundle["__description"]
+    if "/" in name:
+        logging.info("Base name is a file path: %s" % name)
+        name = name.split("/")[-1]
+        logging.info("Using last par of file path as base name: %s" % name)
+
     return _object_from_shared_memory(name, cls, description, data_bundle, backend)
 
 

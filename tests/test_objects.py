@@ -94,6 +94,40 @@ def test_to_from_file():
     assert object == object2
 
 
+
+def test_kmer_index_counter():
+    from graph_kmer_index import CounterKmerIndex
+    from npstructures import Counter
+
+    kmers = np.array([1, 2, 3, 4], dtype=np.int64)
+    nodes = np.array([10, 20, 30, 40], dtype=np.uint32)
+    unique_kmers = np.unique(kmers)
+    counter = Counter(unique_kmers, np.zeros_like(unique_kmers))
+    #counter.count([1])
+    #counter.count([2, 2, 3])
+    index = CounterKmerIndex(kmers, nodes, counter)
+    print(index.counter._values)
+    counter.count([1])
+    print(index.counter._values)
+    #index.counter.count([1])
+    index = to_file(index)
+    index2 = object_to_shared_memory(from_file(index))
+
+
+    index3 = object_from_shared_memory(index2)
+    index3.counter.count([1, 2, 2, 3])
+
+    assert np.all(index3.counter[1, 2, 3, 4] == np.array([2, 2, 1, 0]))
+    print(index3.counter)
+
+    index4 = object_from_shared_memory(index2)
+    print(index4.counter)
+
+    index4.counter.count([1])
+    index5 = object_from_shared_memory(index2)
+    print(index4.counter, index5.counter, index3.counter)
+
+test_kmer_index_counter()
 test()
 test2()
 test_counter()
