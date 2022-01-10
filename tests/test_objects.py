@@ -3,6 +3,7 @@ logging.basicConfig(level=logging.INFO)
 import numpy as np
 from shared_memory_wrapper.shared_memory import object_to_shared_memory, object_from_shared_memory
 from shared_memory_wrapper import free_memory_in_session
+from shared_memory_wrapper import to_file, from_file
 
 
 class B:
@@ -84,10 +85,21 @@ def test_various_backends():
         assert a2 == a
 
 
+
+def test_to_from_file():
+    object = _get_dummy_object()
+    to_file(object, "testobject")
+    object2 = from_file("testobject")
+
+    assert object == object2
+
+
 test()
 test2()
 test_counter()
 test_various_backends()
+test_to_from_file()
 
 free_memory_in_session()
+
 
