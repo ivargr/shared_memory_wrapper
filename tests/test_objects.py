@@ -127,12 +127,64 @@ def test_kmer_index_counter():
     index5 = object_from_shared_memory(index2)
     print(index4.counter, index5.counter, index3.counter)
 
-test_kmer_index_counter()
+
+
+def test_list_object():
+    object = [1, np.array([1, 2, 3]), 3]
+    name = object_to_shared_memory(object)
+    object2 = object_from_shared_memory(name)
+
+    assert object2[0] == 1
+    assert np.all(object2[1] == [1, 2, 3])
+    assert object2[2] == 3
+
+
+
+def test_object2():
+    from npstructures.multi_value_hashtable import MultiValueHashTable
+    h = MultiValueHashTable(np.array([1, 2, 3]), {"key1": np.array([1, 2, 1]), "key2": np.array([5, 6, 7])})
+    h2 = object_from_shared_memory(object_to_shared_memory(h))
+    print(h, h2)
+    print(h[1], h2[1])
+    assert h[1]["key1"] == h2[1]["key1"]
+    assert h[3] == h2[3]
+
+
+
+def test_single_base_types():
+    name = object_to_shared_memory("test")
+    assert object_from_shared_memory(name) == "test"
+
+    assert object_from_shared_memory(object_to_shared_memory(5.1)) == 5.1
+
+
+def test_list():
+    name = object_to_shared_memory([1, 2, 3])
+    assert object_from_shared_memory(name) == [1, 2, 3]
+
+    name = object_to_shared_memory([1, B("hei"), 3])
+    assert object_from_shared_memory(name)[1]._array == "hei"
+
+
+def test_dict():
+    d = {"test": 1, "test2": "hi"}
+    name = object_to_shared_memory(d)
+    d2 = object_from_shared_memory(name)
+
+    print(d2)
+    assert d == d2
+
+#test_kmer_index_counter()
 test()
 test2()
 test_counter()
 test_various_backends()
 test_to_from_file()
+test_list_object()
+#test_object2()
+test_single_base_types()
+test_list()
+test_dict()
 
 free_memory_in_session()
 

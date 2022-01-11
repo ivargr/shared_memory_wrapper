@@ -83,6 +83,7 @@ def _get_class_init_arguments(cls):
 def _get_object_init_arguments(object):
     arguments = list(inspect.getfullargspec(object.__class__.__init__))[0]
     arguments.remove("self")
+    #arguments.append("kwargs")
     return arguments
 
 def array_from_shared_memory(name, backend="shared_array"):
@@ -148,8 +149,10 @@ def object_to_shared_memory(object, base_name=None, backend="shared_array"):
         logging.info("Using last par of file path as base name: %s" % base_name)
 
     description = _object_to_shared_memory(object, base_name, data_bundle, backend)
-    description = (object.__class__, description)
+    #description = (object.__class__, description)
     data_bundle.save(description)
+
+    print(description)
 
     #with open("." + base_name + ".shm", "wb") as f:
     #    pickle.dump(description, f)
@@ -157,62 +160,99 @@ def object_to_shared_memory(object, base_name=None, backend="shared_array"):
     return base_name
 
 
+def _object_is_basetype(object):
+    if isinstance(object, int) or isinstance(object, str) or isinstance(object, float):
+        return True
+    return False
+
+
 def _object_to_shared_memory(object, name, data_bundle, backend="shared_array"):
-    variable_names = _get_object_init_arguments(object)
-    description = OrderedDict()
-    for variable_name in variable_names:
-        if not hasattr(object, variable_name):
-            variable_name = "_" + variable_name
-            if not(hasattr(object, variable_name)):
-                logging.warning("Object %s has init argument %s, but no property with the same name. Ignoring" % (object, variable_name))
-                continue
+    """
+    Function will be called recursively. Responsibility: Put object in shared memory,
+    and return tuple of (object description, description dict from calling same method
+    on children if object has children)
+    """
 
-        variable_data = getattr(object, variable_name)
-        shared_memory_name = name + "-" + variable_name
+    if _object_is_basetype(object):
+        data_bundle.add(name, object)
+        return ("pickle", None)
+    elif isinstance(object, np.ndarray):
+        data_bundle.add(name, object)
+        return ("ndarray", None)
+    elif issubclass(list, object.__class__):
+        return (object.__class__, [_object_to_shared_memory(element, name + "-" + str(i), data_bundle, backend)
+                         for i, element in enumerate(object)])
+    elif issubclass(dict, object.__class__):
+        return (object.__class__, {key: _object_to_shared_memory(value, name + "-" + str(key), data_bundle, backend)
+                                   for key, value in object.items()})
+    else:
+        # is an object with possibly children
+        # go through children and put these in shared memory
+        variable_names = _get_object_init_arguments(object)
+        #logging.info("Variable names in %s: %s" % (object.__class__, variable_names))
+        description = OrderedDict()
+        for variable_name in variable_names:
+            if not hasattr(object, variable_name):
+                variable_name = "_" + variable_name
+                if not (hasattr(object, variable_name)):
+                    logging.warning("Object %s has init argument %s, but no property with the same name. Ignoring" % (
+                    object, variable_name))
+                    continue
 
-        if isinstance(variable_data, int) or isinstance(variable_data, str) or isinstance(variable_data, float):
-            description[variable_name] = ("pickle", None)
-            data_bundle.add(shared_memory_name, variable_data)
-        elif isinstance(variable_data, np.ndarray):
-            description[variable_name] = ("ndarray", None)
-            data_bundle.add(shared_memory_name, variable_data)
-        else:
-            # try to save this object recursively to shared memory
-            desc = _object_to_shared_memory(variable_data, shared_memory_name, data_bundle, backend)
-            description[variable_name] = (variable_data.__class__, desc)
+            variable_data = getattr(object, variable_name)
+            child_shared_memory_name = name + "-" + variable_name
+            description[variable_name] = _object_to_shared_memory(variable_data, child_shared_memory_name, data_bundle, backend)
 
-    return description
+        return (object.__class__, description)
+
+
+def _list_to_shared_memory(object, name, data_bundle, backend):
+    return (list, OrderedDict({i: _object_to_shared_memory(element, name + "-" + str(i), data_bundle, backend)
+                               for i, element in enumerate(object)}))
 
 
 def object_from_shared_memory(name, backend="shared_array"):
     data_bundle = np.load(name + ".npz", allow_pickle=True)
-    cls, description = data_bundle["__description"]
+    description = data_bundle["__description"]
     if "/" in name:
         logging.info("Base name is a file path: %s" % name)
         name = name.split("/")[-1]
         logging.info("Using last par of file path as base name: %s" % name)
 
-    return _object_from_shared_memory(name, cls, description, data_bundle, backend)
+    return _object_from_shared_memory(name, description, data_bundle, backend)
 
 
-def _object_from_shared_memory(name, cls, description, data_bundle, backend="shared_array"):
-    data = []
-    for attribute, attribute_description in description.items():
-        attribute_type = attribute_description[0]
-        shared_memory_name = name + "-" + attribute
-        if attribute_type == "pickle":
-            #data.append(base_type_from_shared_memory(shared_memory_name))
-            data.append(np.atleast_1d(data_bundle[shared_memory_name])[0])
-        elif attribute_type == "ndarray":
+def _object_from_shared_memory(name, description, data_bundle, backend="shared_array"):
+    #print("object from shared memory %s, class %s, description %s" % (name, cls, description))
+    object_type, children = description
+
+    if children is None:
+        # no children
+        if object_type == "pickle":
+            return np.atleast_1d(data_bundle[name])[0]
+        elif object_type == "ndarray":
             if backend == "file":
-                data.append(data_bundle[shared_memory_name])
+                return data_bundle[name]
             else:
-                data.append(array_from_shared_memory(shared_memory_name, backend))
+                return array_from_shared_memory(name, backend)
         else:
-            # attribute is object
-            data.append(_object_from_shared_memory(shared_memory_name, attribute_type, attribute_description[1], data_bundle, backend))
+            raise Exception("Error: %s" % description)
+    else:
+        # has children
+        if issubclass(list, object_type):
+            return object_type([_object_from_shared_memory(name + "-" + str(i), e, data_bundle, backend)
+                    for i, e in enumerate(children)])
+        elif issubclass(dict, object_type):
+            return object_type((key_name, _object_from_shared_memory(name + "-" + key_name, child_desc, data_bundle, backend))
+                                for key_name, child_desc in children.items())
+        else:
+            #print("Has children: %s" % str((description)))
+            data = []
+            for child_name, child_description in children.items():
+                shared_memory_name = name + "-" + child_name
+                data.append(_object_from_shared_memory(shared_memory_name, child_description, data_bundle, backend))
 
-    return cls(*data)
+            return object_type(*data)
 
 
 def from_shared_memory(cls, name, use_python_backend=False):
