@@ -140,16 +140,6 @@ def test_list_object():
 
 
 
-def test_object2():
-    from npstructures.multi_value_hashtable import MultiValueHashTable
-    h = MultiValueHashTable(np.array([1, 2, 3]), {"key1": np.array([1, 2, 1]), "key2": np.array([5, 6, 7])})
-    h2 = object_from_shared_memory(object_to_shared_memory(h))
-    print(h, h2)
-    print(h[1], h2[1])
-    assert h[1]["key1"] == h2[1]["key1"]
-    assert h[3] == h2[3]
-
-
 
 def test_single_base_types():
     name = object_to_shared_memory("test")
@@ -174,6 +164,16 @@ def test_dict():
     print(d2)
     assert d == d2
 
+
+def test_multi_hashtable():
+    from npstructures.multi_value_hashtable import MultiValueHashTable
+    h = MultiValueHashTable.from_keys_and_values(np.array([1, 2, 3]), {"key1": np.array([1, 2, 1]), "key2": np.array([5, 6, 7])})
+    h2 = object_from_shared_memory(object_to_shared_memory(h))
+    print(h, h2)
+    print(h[1], h2[1])
+    assert h[1]["key1"] == h2[1]["key1"]
+    assert h[3] == h2[3]
+
 #test_kmer_index_counter()
 test()
 test2()
@@ -181,10 +181,10 @@ test_counter()
 test_various_backends()
 test_to_from_file()
 test_list_object()
-#test_object2()
 test_single_base_types()
 test_list()
 test_dict()
+test_multi_hashtable()
 
 free_memory_in_session()
 
