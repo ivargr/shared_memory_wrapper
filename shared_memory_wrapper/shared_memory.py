@@ -137,7 +137,7 @@ def from_file(name):
 
 
 def to_file(object, base_name=None):
-    if base_name.endswith(".npz"):
+    if base_name is not None and base_name.endswith(".npz"):
         base_name = base_name.replace(".npz", "")
     return object_to_shared_memory(object, base_name, backend="file")
 

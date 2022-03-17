@@ -165,7 +165,7 @@ def test_dict():
     assert d == d2
 
 
-def test_multi_hashtable():
+def __test_multi_hashtable():
     from npstructures.multi_value_hashtable import MultiValueHashTable
     h = MultiValueHashTable.from_keys_and_values(np.array([1, 2, 3]), {"key1": np.array([1, 2, 1]), "key2": np.array([5, 6, 7])})
     h2 = object_from_shared_memory(object_to_shared_memory(h))
@@ -188,7 +188,7 @@ test_list_object()
 test_single_base_types()
 test_list()
 test_dict()
-test_multi_hashtable()
+#__test_multi_hashtable()
 test_set()
 
 
