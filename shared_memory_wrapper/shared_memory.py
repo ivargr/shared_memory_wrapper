@@ -106,7 +106,11 @@ def array_to_shared_memory(name, array, backend):
             pass
 
         shared_array = sa.create(name, array.shape, array.dtype)
-        shared_array[:] = array
+        try:
+            shared_array[:] = array
+        except IndexError:
+            logging.error("Error when trying to save %s to shared memory" % name)
+            raise
         SHARED_MEMORIES_IN_SESSION.append(name)
     elif backend == "python":
         python_shared_memory.np_array_to_shared_memory(name, array)
@@ -133,6 +137,8 @@ def from_file(name):
 
 
 def to_file(object, base_name=None):
+    if base_name.endswith(".npz"):
+        base_name = base_name.replace(".npz", "")
     return object_to_shared_memory(object, base_name, backend="file")
 
 
@@ -179,6 +185,8 @@ def _object_to_shared_memory(object, name, data_bundle, backend="shared_array"):
     elif isinstance(object, np.ndarray):
         data_bundle.add(name, object)
         return ("ndarray", None)
+    elif isinstance(object, set):
+        return (object.__class__, array_to_shared_memory(name, np.array([e for e in object]), backend))
     elif issubclass(list, object.__class__):
         return (object.__class__, [_object_to_shared_memory(element, name + "-" + str(i), data_bundle, backend)
                          for i, element in enumerate(object)])
@@ -212,7 +220,16 @@ def _list_to_shared_memory(object, name, data_bundle, backend):
 
 
 def object_from_shared_memory(name, backend="shared_array"):
-    data_bundle = np.load(name + ".npz", allow_pickle=True)
+    try:
+        data_bundle = np.load(name + ".npz", allow_pickle=True)
+    except FileNotFoundError:
+        try:
+            data_bundle = np.load(name, allow_pickle=True)
+            name = name.replace(".npz", "")
+        except FileNotFoundError:
+            logging.error("Object file not found")
+            raise
+
     description = data_bundle["__description"]
     if "/" in name:
         logging.info("Base name is a file path: %s" % name)
@@ -235,6 +252,8 @@ def _object_from_shared_memory(name, description, data_bundle, backend="shared_a
                 return data_bundle[name]
             else:
                 return array_from_shared_memory(name, backend)
+        elif issubclass(set, object_type):
+            return set(array_from_shared_memory(name, backend))
         else:
             raise Exception("Error: %s" % description)
     else:
@@ -294,8 +313,12 @@ def to_shared_memory(object, name=None, use_python_backend=False):
             data = np.zeros(0)
 
         # Wrap single ints in arrays
-        if data.shape == ():
-            data = np.array([data], dtype=data.dtype)
+        if type(data) == int or data.shape == ():
+            if type(data) == int:
+                dtype=int
+            else:
+                dtype=data.dtype
+            data = np.array([data], dtype=dtype)
 
         array_to_shared_memory(shared_memory_name, data, "python" if use_python_backend else "shared_array")
 

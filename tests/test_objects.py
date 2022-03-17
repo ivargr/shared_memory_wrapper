@@ -174,6 +174,10 @@ def test_multi_hashtable():
     assert h[1]["key1"] == h2[1]["key1"]
     assert h[3] == h2[3]
 
+def test_set():
+    a = set([1, 5, 3, 4])
+    assert object_from_shared_memory(object_to_shared_memory(a)) == a
+
 #test_kmer_index_counter()
 test()
 test2()
@@ -185,6 +189,8 @@ test_single_base_types()
 test_list()
 test_dict()
 test_multi_hashtable()
+test_set()
+
 
 free_memory_in_session()
 
