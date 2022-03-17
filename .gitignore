@@ -1,5 +1,10 @@
 .idea/
 dist/
 shared_memory_wrapper.egg-info/
+*.shm
+*.npz
+*.npy
+*.deb
+*.fa
 __pycache__
 
