@@ -262,7 +262,7 @@ def _object_from_shared_memory(name, description, data_bundle, backend="shared_a
             return object_type([_object_from_shared_memory(name + "-" + str(i), e, data_bundle, backend)
                     for i, e in enumerate(children)])
         elif issubclass(dict, object_type):
-            return object_type((key_name, _object_from_shared_memory(name + "-" + key_name, child_desc, data_bundle, backend))
+            return object_type((key_name, _object_from_shared_memory(name + "-" + str(key_name), child_desc, data_bundle, backend))
                                 for key_name, child_desc in children.items())
         else:
             #print("Has children: %s" % str((description)))
