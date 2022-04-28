@@ -187,7 +187,7 @@ def _object_to_shared_memory(object, name, data_bundle, backend="shared_array"):
         return ("ndarray", None)
     elif isinstance(object, set):
         return (object.__class__, array_to_shared_memory(name, np.array([e for e in object]), backend))
-    elif issubclass(list, object.__class__):
+    elif issubclass(list, object.__class__) or issubclass(tuple, object.__class__):
         return (object.__class__, [_object_to_shared_memory(element, name + "-" + str(i), data_bundle, backend)
                          for i, element in enumerate(object)])
     elif issubclass(dict, object.__class__):
@@ -258,7 +258,7 @@ def _object_from_shared_memory(name, description, data_bundle, backend="shared_a
             raise Exception("Error: %s" % description)
     else:
         # has children
-        if issubclass(list, object_type):
+        if issubclass(list, object_type) or issubclass(tuple, object_type):
             return object_type([_object_from_shared_memory(name + "-" + str(i), e, data_bundle, backend)
                     for i, e in enumerate(children)])
         elif issubclass(dict, object_type):

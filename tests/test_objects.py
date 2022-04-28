@@ -156,6 +156,13 @@ def test_list():
     assert object_from_shared_memory(name)[1]._array == "hei"
 
 
+def test_tuple():
+    a = (5, 3.0, "a")
+    a2 = object_from_shared_memory(object_to_shared_memory(a))
+
+    assert a == a2
+
+
 def test_dict():
     d = {"test": 1, "test2": "hi"}
     name = object_to_shared_memory(d)
@@ -190,6 +197,7 @@ test_list()
 test_dict()
 #__test_multi_hashtable()
 test_set()
+test_tuple()
 
 
 free_memory_in_session()
