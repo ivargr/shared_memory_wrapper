@@ -158,8 +158,6 @@ def object_to_shared_memory(object, base_name=None, backend="shared_array"):
     #description = (object.__class__, description)
     data_bundle.save(description)
 
-    print(description)
-
     #with open("." + base_name + ".shm", "wb") as f:
     #    pickle.dump(description, f)
 
