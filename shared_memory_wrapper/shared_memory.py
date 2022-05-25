@@ -156,6 +156,7 @@ def object_to_shared_memory(object, base_name=None, backend="shared_array"):
 
     description = _object_to_shared_memory(object, base_name, data_bundle, backend)
     #description = (object.__class__, description)
+    print(description)
     data_bundle.save(description)
 
     #with open("." + base_name + ".shm", "wb") as f:
@@ -166,6 +167,8 @@ def object_to_shared_memory(object, base_name=None, backend="shared_array"):
 
 def _object_is_basetype(object):
     if isinstance(object, int) or isinstance(object, str) or isinstance(object, float):
+        return True
+    elif isinstance(object, np.integer):
         return True
     return False
 
