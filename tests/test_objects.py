@@ -156,6 +156,17 @@ def test_list():
     assert object_from_shared_memory(name)[1]._array == "hei"
 
 
+class D:
+    def __init__(self, l):
+        self.l = l
+
+
+def test_object_with_list():
+    d = D([np.uint32(1)])
+    d2 = object_from_shared_memory(object_to_shared_memory(d))
+    assert d.l == d2.l
+
+
 def test_tuple():
     a = (5, 3.0, "a")
     a2 = object_from_shared_memory(object_to_shared_memory(a))
@@ -184,6 +195,23 @@ def __test_multi_hashtable():
 def test_set():
     a = set([1, 5, 3, 4])
     assert object_from_shared_memory(object_to_shared_memory(a)) == a
+
+
+
+def test_obgraph():
+    from obgraph import Graph
+    graph = Graph.from_dicts(
+        {1: "ACT", 2: "T", 3: "G", 4: "TGTTTAAA"},
+        {1: [2, 3], 2: [4], 3: [4]},
+        [1, 2, 4]
+    )
+
+    g = object_to_shared_memory(graph)
+    g2 = object_from_shared_memory(g)
+
+    assert g2.chromosome_start_nodes == graph.chromosome_start_nodes
+
+
 
 #test_kmer_index_counter()
 test()
