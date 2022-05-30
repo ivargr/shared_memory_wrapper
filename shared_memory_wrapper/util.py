@@ -2,6 +2,7 @@ import logging
 import multiprocessing
 from .shared_memory import object_to_shared_memory, object_from_shared_memory
 from collections.abc import Iterable
+from .shared_memory import get_shared_pool, close_shared_pool
 
 
 def interval_chunks(start, end, n_chunks):
@@ -107,7 +108,7 @@ def parallel_map_reduce(function, data, mapper, reducer=None, n_threads=8):
     assert isinstance(data, tuple)
 
     data = object_to_shared_memory(data)
-    pool = multiprocessing.Pool(n_threads)
+    pool = get_shared_pool(n_threads)
 
     function = FunctionWrapper(function, data)
 
@@ -115,6 +116,8 @@ def parallel_map_reduce(function, data, mapper, reducer=None, n_threads=8):
         if reducer is not None:
             assert result is not None
             reducer.add_result(result)
+
+    close_shared_pool()
 
     if reducer is not None:
         return reducer.get_final_result()
