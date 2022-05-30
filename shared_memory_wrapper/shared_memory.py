@@ -71,6 +71,7 @@ def close_shared_pool():
     global _shared_pool
     if _shared_pool is not None:
         _shared_pool.close()
+        _shared_pool = None
         logging.info("Closed shared pool")
 
 
