@@ -11,6 +11,7 @@ from pathos.multiprocessing import Pool
 import inspect
 from . import python_shared_memory
 from collections import OrderedDict
+from . import posix_shared_memory
 
 
 
@@ -19,7 +20,7 @@ class DataBundle:
     Simple wrapper around np.savez for wrapping multiple files in an archive
     """
     def __init__(self, file_name, backend="file"):
-        assert backend in ["file", "shared_array", "python"]
+        assert backend in ["file", "shared_array", "python", "posix"]
         self._file_name = file_name
         self._backend = backend
         self._description = {}
@@ -92,6 +93,8 @@ def array_from_shared_memory(name, backend="shared_array"):
         return sa.attach(name)
     elif backend == "python":
         return python_shared_memory.np_array_from_shared_memory(name)
+    elif backend == "posix":
+        return posix_shared_memory.np_array_from_shared_memory(name)
     elif backend == "file":
         return np.load("." + name + ".npy")
     else:
@@ -115,6 +118,8 @@ def array_to_shared_memory(name, array, backend):
         SHARED_MEMORIES_IN_SESSION.append(name)
     elif backend == "python":
         python_shared_memory.np_array_to_shared_memory(name, array)
+    elif backend == "posix":
+        posix_shared_memory.np_array_to_shared_memory(name, array)
     elif backend == "file":
         np.save("." + name + ".npy", array, allow_pickle=True)
     else:
