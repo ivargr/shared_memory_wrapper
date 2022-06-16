@@ -5,6 +5,8 @@ from collections.abc import Iterable
 from .shared_memory import get_shared_pool, close_shared_pool
 import resource
 import tracemalloc
+import numpy as np
+
 
 def interval_chunks(start, end, n_chunks):
     assert end > start
@@ -77,6 +79,18 @@ class AddReducer(Reducer):
 
     def get_final_result(self):
         return self.result
+
+
+class ConcatenateReducer(Reducer):
+    def __init__(self, axis=0):
+        self._axis = axis
+        self.results = []
+
+    def add_result(self, result):
+        self.results.append(result)
+
+    def get_final_result(self):
+        return np.concatenate(self.results, axis=self._axis)
 
 
 """
