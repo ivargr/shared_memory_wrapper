@@ -46,7 +46,7 @@ class DataBundle:
 
         save_to_file["__description"]  = description_dict
         np.savez(self._file_name, **save_to_file)
-        logging.info("Saved to %s" % self._file_name)
+        #logging.info("Saved to %s" % self._file_name)
 
 
 class SingleSharedArray:
@@ -162,7 +162,6 @@ def object_to_shared_memory(object, base_name=None, backend="shared_array"):
 
     description = _object_to_shared_memory(object, base_name, data_bundle, backend)
     #description = (object.__class__, description)
-    print(description)
     data_bundle.save(description)
 
     #with open("." + base_name + ".shm", "wb") as f:
