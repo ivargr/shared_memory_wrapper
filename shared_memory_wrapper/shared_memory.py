@@ -371,7 +371,7 @@ def _run_numpy_based_function_on_shared_memory_arguments(function, arguments, in
     arguments = [from_shared_memory(SingleSharedArray, a).array if type(a) == str else a for a in arguments]
     sliced_arguments = []
     for argument in arguments:
-        if isinstance(argument, np.ndarray):
+        if isinstance(argument, np.ndarray) and argument.shape[0] != 1:
             argument = argument[start:end]
         sliced_arguments.append(argument)
 
@@ -391,12 +391,20 @@ def run_numpy_based_function_in_parallel(function, n_threads, arguments):
 
     # Put np arrays in shared memory, everything else we keep as is
     array_length = 0
-    for argument in arguments:
-        if isinstance(argument, np.ndarray):
+    for i, argument in enumerate(arguments):
+        # don't split ndarrays with shape[0] == 1
+        if isinstance(argument, np.ndarray) and argument.shape[0] != 1:
             argument_id = str(np.random.randint(0, 10e15))
             to_shared_memory(SingleSharedArray(argument), argument_id)
             new_arguments.append(argument_id)
-            assert array_length == 0 or array_length == argument.shape[0], "Found argument with different shape"
+            if array_length != 0 and array_length != argument.shape[0]:
+                logging.error("Found argument with different shape")
+                logging.error("Shape: %s" % str(argument.shape))
+                logging.error("ARray length: %d" % array_length)
+                logging.error("Argument #%d" % i)
+                logging.error("Data: %s" % argument)
+                raise Exception("")
+
             array_length = argument.shape[0]
 
         else:
