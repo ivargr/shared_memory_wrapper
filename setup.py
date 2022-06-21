@@ -3,7 +3,7 @@ from distutils.core import setup
 import numpy as np
 
 setup(name='shared_memory_wrapper',
-      version='0.0.12',
+      version='0.0.13',
       description='Shared Memory Wrapper',
       url='http://github.com/ivargr/shared_memory_wrapper',
       author='Ivar Grytten',

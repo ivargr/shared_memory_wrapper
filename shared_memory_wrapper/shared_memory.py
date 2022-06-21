@@ -2,7 +2,7 @@ import random
 import pickle
 import time
 import inspect
-
+import os
 import SharedArray as sa
 import logging
 import numpy as np
@@ -14,6 +14,8 @@ from collections import OrderedDict
 from . import posix_shared_memory
 
 
+SHARED_MEMORIES_IN_SESSION = []
+TMP_FILES_IN_SESSION = []
 
 class DataBundle:
     """"
@@ -30,6 +32,7 @@ class DataBundle:
         self._data[name] = data
 
     def save(self, description_dict):
+        global TMP_FILES_IN_SESSION
 
         save_to_file = {}  # will save these to file in the end
         if self._backend == "file" or self._backend == "compressed_file":
@@ -50,6 +53,9 @@ class DataBundle:
             np.savez_compressed(self._file_name, **save_to_file)
         else:
             np.savez(self._file_name, **save_to_file)
+
+        if self._backend != "file" and self._backend != "compressed_file":
+            TMP_FILES_IN_SESSION.append(self._file_name + ".npz")
         #logging.info("Saved to %s" % self._file_name)
 
 
@@ -58,7 +64,6 @@ class SingleSharedArray:
     def __init__(self, array=None):
         self.array = array
 
-SHARED_MEMORIES_IN_SESSION = []
 
 _shared_pool = None
 
@@ -358,6 +363,10 @@ def remove_shared_memory_in_session():
         except FileNotFoundError:
             pass
             #logging.warning("Tried to deleted shared memory %s that did not exist" % name)
+
+    for file in TMP_FILES_IN_SESSION:
+        if os.path.exists(file):
+            os.remove(file)
 
     python_shared_memory.free_memory()
 
