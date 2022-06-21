@@ -20,7 +20,7 @@ class DataBundle:
     Simple wrapper around np.savez for wrapping multiple files in an archive
     """
     def __init__(self, file_name, backend="file"):
-        assert backend in ["file", "shared_array", "python", "posix"]
+        assert backend in ["compressed_file", "file", "shared_array", "python", "posix"]
         self._file_name = file_name
         self._backend = backend
         self._description = {}
@@ -32,7 +32,7 @@ class DataBundle:
     def save(self, description_dict):
 
         save_to_file = {}  # will save these to file in the end
-        if self._backend == "file":
+        if self._backend == "file" or self._backend == "compressed_file":
             # everything can be saved to file
             save_to_file = self._data
         else:
@@ -45,7 +45,11 @@ class DataBundle:
                     save_to_file[name] = data
 
         save_to_file["__description"]  = description_dict
-        np.savez(self._file_name, **save_to_file)
+        if self._backend == "compressed_file":
+            logging.info("Saving to compressed file")
+            np.savez_compressed(self._file_name, **save_to_file)
+        else:
+            np.savez(self._file_name, **save_to_file)
         #logging.info("Saved to %s" % self._file_name)
 
 
@@ -95,7 +99,7 @@ def array_from_shared_memory(name, backend="shared_array"):
         return python_shared_memory.np_array_from_shared_memory(name)
     elif backend == "posix":
         return posix_shared_memory.np_array_from_shared_memory(name)
-    elif backend == "file":
+    elif backend == "file" or backend == "compressed_file":
         return np.load("." + name + ".npy")
     else:
         raise Exception("Invalid backend %s" % backend)
@@ -120,7 +124,7 @@ def array_to_shared_memory(name, array, backend):
         python_shared_memory.np_array_to_shared_memory(name, array)
     elif backend == "posix":
         posix_shared_memory.np_array_to_shared_memory(name, array)
-    elif backend == "file":
+    elif backend == "file" or backend == "compressed_file":
         np.save("." + name + ".npy", array, allow_pickle=True)
     else:
         raise Exception("Invalid backend %s" % backend)
@@ -142,13 +146,16 @@ def from_file(name):
     return object_from_shared_memory(name, "file")
 
 
-def to_file(object, base_name=None):
+def to_file(object, base_name=None, compress=False):
     if base_name is not None and base_name.endswith(".npz"):
         base_name = base_name.replace(".npz", "")
-    return object_to_shared_memory(object, base_name, backend="file")
+
+    backend = "file" if not compress else "compressed_file"
+    return object_to_shared_memory(object, base_name, backend=backend)
 
 
 def object_to_shared_memory(object, base_name=None, backend="shared_array"):
+    t = time.perf_counter()
     if base_name is None:
         random_generator = random.Random()  # create new generator so seed does not affect
         base_name = str(random_generator.randint(0, 10e15))
@@ -167,6 +174,7 @@ def object_to_shared_memory(object, base_name=None, backend="shared_array"):
     #with open("." + base_name + ".shm", "wb") as f:
     #    pickle.dump(description, f)
 
+    logging.debug("Took %.3f sec to write object to shared memory" % (time.perf_counter()-t))
     return base_name
 
 
@@ -254,7 +262,7 @@ def _object_from_shared_memory(name, description, data_bundle, backend="shared_a
         if object_type == "pickle":
             return np.atleast_1d(data_bundle[name])[0]
         elif object_type == "ndarray":
-            if backend == "file":
+            if backend == "file" or backend == "compressed_file":
                 return data_bundle[name]
             else:
                 return array_from_shared_memory(name, backend)

@@ -212,6 +212,16 @@ def test_obgraph():
     assert g2.chromosome_start_nodes == graph.chromosome_start_nodes
 
 
+def test_compressed_file():
+    from obgraph import Graph
+    a = A(100, A(100, C("hello", 3.0), np.array([1])), np.array([1, 2, 3], dtype=float))
+
+    to_file(a, "test.tmp", compress=True)
+    a2 = from_file("test.tmp")
+
+    print(a2)
+    assert a == a2
+
 
 #test_kmer_index_counter()
 test()
