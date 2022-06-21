@@ -430,6 +430,8 @@ def run_numpy_based_function_in_parallel(function, n_threads, arguments):
         result = from_shared_memory(SingleSharedArray, result).array
         results.append(result)
 
+    close_shared_pool()
+
     t = time.perf_counter()
     results = np.concatenate(results)
     logging.debug("Time to concatenate results: %.3f" % (time.perf_counter()-t))

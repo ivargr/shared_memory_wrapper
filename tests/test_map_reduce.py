@@ -46,31 +46,3 @@ def test_posix():
     assert np.all(a == b)
 
 
-def test():
-    n_threads = 10
-    get_shared_pool(n_threads)
-    log_memory_usage("Starting")
-    n = 1000000000 * 4
-    #data = np.random.randint(0, 10, n, dtype=np.int8)
-    data = from_file("../counter_index_only_variants_with_revcomp.npz")
-    log_memory_usage("Data created")
-
-
-    reducer = interval_chunks(0, 200, 10)
-    print(list(reducer))
-    results = parallel_map_reduce(some_function, (data,),
-                                  reducer,
-                                  MyReducer(),
-                                  n_threads,
-                                  backend="shared_array")
-
-
-    print(results)
-    log_memory_usage("Before closing shared pool")
-    close_shared_pool()
-    log_memory_usage("After closing shared pool")
-    free_memory_in_session()
-
-
-
-test()
