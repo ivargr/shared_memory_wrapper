@@ -71,8 +71,9 @@ _shared_pool = None
 def get_shared_pool(n_threads=16):
     global _shared_pool
     if _shared_pool is None:
+        t = time.perf_counter()
         _shared_pool = Pool(n_threads)
-        logging.info("Made shared pool")
+        logging.info("Made shared pool, took %.4f sec" % (time.perf_counter()-t))
 
     return _shared_pool
 
@@ -439,7 +440,7 @@ def run_numpy_based_function_in_parallel(function, n_threads, arguments):
         result = from_shared_memory(SingleSharedArray, result).array
         results.append(result)
 
-    close_shared_pool()
+    #close_shared_pool()
 
     t = time.perf_counter()
     results = np.concatenate(results)
