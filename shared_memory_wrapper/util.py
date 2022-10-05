@@ -88,7 +88,6 @@ class AddReducerWithSharedMemory(Reducer):
 
     def add_result(self, result):
         self.result += object_from_shared_memory(result)
-        logging.info("Removing shared memory after adding result %s" % result)
         remove_shared_memory(result)
 
     def get_final_result(self):
