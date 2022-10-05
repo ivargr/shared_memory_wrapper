@@ -6,6 +6,7 @@ from .shared_memory import get_shared_pool, close_shared_pool
 import resource
 import tracemalloc
 import numpy as np
+import itertools
 
 
 def interval_chunks(start, end, n_chunks):
@@ -102,6 +103,26 @@ def run_in_parallel(mapper, reducer, n_threads=8, reduce="element-wise-sum"):
     return reducer.get_final_result()
 """
 
+
+def subchunker(iterable, n=10):
+    i = 0
+    for i, element in enumerate(iterable):
+        yield element
+        if i >= n-1:
+            break
+
+    if i == 0:
+        return
+
+
+def chunker(iterable, n=10):
+    while True:
+        subchunk = subchunker(iterable, n=n)
+        yield subchunk
+
+
+
+
 class FunctionWrapper:
     def __init__(self, function, data_id, backend=None):
         self.function = function
@@ -109,21 +130,31 @@ class FunctionWrapper:
         self._backend = backend
 
     def __call__(self, run_specific_variable):
-        log_memory_usage("Getting data from shared memory")
         data = object_from_shared_memory(self.data_id, backend=self._backend)
-        log_memory_usage("Done getting data from shared memory")
         result = self.function(*data, run_specific_variable)
-        logging.info("Done with job. Returning result")
-
         return result
 
 
-def parallel_map_reduce_with_adding(function, data, mapper, initial_data, n_threads=8):
+def parallel_map_reduce_with_adding(function, data, mapper, initial_data, n_threads=8, chunk_size=50):
     reducer = AddReducer(initial_data)
-    return parallel_map_reduce(function, data, mapper, reducer, n_threads)
+    return parallel_map_reduce(function, data, mapper, reducer, n_threads, chunk_size=chunk_size)
 
 
-def parallel_map_reduce(function, data, mapper, reducer=None, n_threads=8, backend="shared_array"):
+def chunked_imap(pool, function, iterable, chunk_size=10):
+    logging.info("running chunked imap with chunk_size %d" % chunk_size)
+    # runs pool.imap but on chunks to lower memory
+    chunks = chunker(iterable, chunk_size)
+    for chunk in chunks:
+        # run only imap on this chunk
+        for i, result in enumerate(pool.imap(function, chunk)):
+            yield result
+
+        if i < chunk_size-1:
+            logging.info("No more results, returning")
+            return
+
+
+def parallel_map_reduce(function, data, mapper, reducer=None, n_threads=7, backend="shared_array", chunk_size=50):
     assert reducer is None or isinstance(reducer, Reducer)
     assert isinstance(mapper, Iterable), "Mapper must be iterable"
     assert isinstance(data, tuple)
@@ -135,7 +166,8 @@ def parallel_map_reduce(function, data, mapper, reducer=None, n_threads=8, backe
 
     function = FunctionWrapper(function, data, backend=backend)
 
-    for result in pool.imap(function, mapper):
+    #for result in pool.imap(function, mapper):
+    for result in chunked_imap(pool, function, mapper, chunk_size=chunk_size):
         logging.info("Result returned")
         if reducer is not None:
             assert result is not None

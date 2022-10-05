@@ -180,7 +180,7 @@ def object_to_shared_memory(object, base_name=None, backend="shared_array"):
     #with open("." + base_name + ".shm", "wb") as f:
     #    pickle.dump(description, f)
 
-    logging.debug("Took %.3f sec to write object to shared memory" % (time.perf_counter()-t))
+    #logging.debug("Took %.3f sec to write object to shared memory" % (time.perf_counter()-t))
     return base_name
 
 
