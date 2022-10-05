@@ -348,13 +348,15 @@ def to_shared_memory(object, name=None, use_python_backend=False):
 def remove_shared_memory(name):
     shared_memories = [s.name.decode("utf-8") for s in sa.list()]
 
+    n_deleted = 0
     for m in shared_memories:
-        if m.startswith(name + "__"):
+        if m.startswith(name + "__") or m.startswith(name + "-") or m == name:
             sa.delete(m)
-            return
+            n_deleted += 1
 
-    logging.warning("No shared memory with name %s" % name)
-    logging.warning("Available shared memories: %s" % shared_memories)
+    if n_deleted == 0:
+        logging.warning("No shared memory with name %s" % name)
+        logging.warning("Available shared memories: %s" % shared_memories)
 
 
 def remove_shared_memory_in_session():
