@@ -1,6 +1,6 @@
 import logging
 import multiprocessing
-from .shared_memory import object_to_shared_memory, object_from_shared_memory
+from .shared_memory import object_to_shared_memory, object_from_shared_memory, remove_shared_memory
 from collections.abc import Iterable
 from .shared_memory import get_shared_pool, close_shared_pool
 import resource
@@ -82,6 +82,18 @@ class AddReducer(Reducer):
         return self.result
 
 
+class AddReducerWithSharedMemory(Reducer):
+    def __init__(self, initial):
+        self.result = initial
+
+    def add_result(self, result):
+        self.result += object_from_shared_memory(result)
+        logging.info("Removing shared memory after adding result %s" % result)
+        remove_shared_memory(result)
+
+    def get_final_result(self):
+        return self.result
+
 class ConcatenateReducer(Reducer):
     def __init__(self, axis=0):
         self._axis = axis
@@ -145,6 +157,7 @@ def chunked_imap(pool, function, iterable, chunk_size=10):
     # runs pool.imap but on chunks to lower memory
     chunks = chunker(iterable, chunk_size)
     for chunk in chunks:
+        logging.info("Processing chunk in chunked_imap")
         # run only imap on this chunk
         for i, result in enumerate(pool.imap(function, chunk)):
             yield result
@@ -167,8 +180,8 @@ def parallel_map_reduce(function, data, mapper, reducer=None, n_threads=7, backe
     function = FunctionWrapper(function, data, backend=backend)
 
     #for result in pool.imap(function, mapper):
-    for result in chunked_imap(pool, function, mapper, chunk_size=chunk_size):
-        logging.info("Result returned")
+    for i, result in enumerate(chunked_imap(pool, function, mapper, chunk_size=chunk_size)):
+        logging.info("Result %d returned" % i)
         if reducer is not None:
             assert result is not None
             reducer.add_result(result)
