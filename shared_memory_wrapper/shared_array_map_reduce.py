@@ -43,7 +43,7 @@ class FunctionWrapper:
             n_waited = 0
             t = time.perf_counter()
             job_result = self.function(*data, run_specific_data)
-            result_array = result_array + job_result
+            result_array += job_result
             logging.debug("Total time job took was %.3f, of which %.3f was actual job time" % (time.perf_counter()-t_prev_job, time.perf_counter()-t))
             t_prev_job = time.perf_counter()
 
@@ -92,6 +92,5 @@ def additative_shared_array_map_reduce(func, mapper, result_array, shared_data, 
         job_result = object_from_shared_memory(result)
         result_array = result_array +  job_result
     logging.info("Time spent adding results in the end: %.3f" % (time.perf_counter()-t))
-
 
     return result_array
