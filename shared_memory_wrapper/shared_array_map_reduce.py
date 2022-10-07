@@ -25,16 +25,27 @@ class FunctionWrapper:
         data = object_from_shared_memory(self.data_id, backend=self._backend)
         result_array = object_from_shared_memory(result_array)
 
+        n_waited = 0
+        t_prev_job = time.perf_counter()
         while True:
             try:
                 run_specific_data = chunk_queue.get(block=False)
             except queue.Empty:
+                if n_waited > 10:
+                    logging.debug("Process waiting for queue (%d). Too many processes with too little to do?" % n_waited)
+                n_waited += 1
+                time.sleep(0.1)
                 continue
 
             if run_specific_data is None:
                 return
 
-            result_array += self.function(*data, run_specific_data)
+            n_waited = 0
+            t = time.perf_counter()
+            job_result = self.function(*data, run_specific_data)
+            result_array = result_array + job_result
+            logging.debug("Total time job took was %.3f, of which %.3f was actual job time" % (time.perf_counter()-t_prev_job, time.perf_counter()-t))
+            t_prev_job = time.perf_counter()
 
 
 def additative_shared_array_map_reduce(func, mapper, result_array, shared_data, n_threads=4):
@@ -55,14 +66,17 @@ def additative_shared_array_map_reduce(func, mapper, result_array, shared_data, 
         process.start()
 
     # feed chunks to the queue
+    t = time.perf_counter()
     for chunk in mapper:
         shared_queue.put(chunk)
+        logging.debug("Time spent inserting job into queue: %.3f" % (time.perf_counter()-t))
+        t = time.perf_counter()
 
         # don't make queue too big
         while shared_queue.qsize() > n_threads*3:
-            #logging.info("Waiting to get more elements since queue is quite full")
-            #logging.info("Approx queue size now is %d" % shared_queue.qsize())
-            time.sleep(1)
+            logging.debug("Waiting to get more elements since queue is quite full")
+            logging.debug("Approx queue size now is %d" % shared_queue.qsize())
+            time.sleep(0.1)
 
     # feed some None at the end to tell processes to stop waiting
     for _ in range(n_threads):
@@ -75,7 +89,8 @@ def additative_shared_array_map_reduce(func, mapper, result_array, shared_data, 
     # collect results from each process
     t = time.perf_counter()
     for result in result_arrays:
-        result_array += object_from_shared_memory(result)
+        job_result = object_from_shared_memory(result)
+        result_array = result_array +  job_result
     logging.info("Time spent adding results in the end: %.3f" % (time.perf_counter()-t))
 
 
