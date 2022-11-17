@@ -2,7 +2,7 @@ import multiprocessing
 import logging
 import time
 import numpy as np
-
+import os
 from .shared_memory import get_shared_pool, remove_shared_memory, object_to_shared_memory, object_from_shared_memory
 from multiprocessing import Pool, Queue, Process
 import queue
@@ -22,6 +22,7 @@ class FunctionWrapper:
         self._backend = backend
 
     def __call__(self, chunk_queue, result_array):
+        logging.debug("Starting %s" % os.getpid())
         data = object_from_shared_memory(self.data_id, backend=self._backend)
         result_array = object_from_shared_memory(result_array)
 
@@ -29,7 +30,7 @@ class FunctionWrapper:
         t_prev_job = time.perf_counter()
         while True:
             try:
-                run_specific_data = chunk_queue.get(block=False)
+                run_specific_data = chunk_queue.get(block=True)
             except queue.Empty:
                 if n_waited > 10:
                     logging.debug("Process waiting for queue (%d). Too many processes with too little to do?" % n_waited)
@@ -38,11 +39,14 @@ class FunctionWrapper:
                 continue
 
             if run_specific_data is None:
+                logging.debug("Run data is None, stopping process")
                 return
 
             n_waited = 0
             t = time.perf_counter()
+            logging.debug("Starting job")
             job_result = self.function(*data, run_specific_data)
+            logging.debug("Result from job: %s" % job_result)
             result_array += job_result
             logging.debug("Total time job took was %.3f, of which %.3f was actual job time" % (time.perf_counter()-t_prev_job, time.perf_counter()-t))
             t_prev_job = time.perf_counter()
@@ -90,6 +94,7 @@ def additative_shared_array_map_reduce(func, mapper, result_array, shared_data, 
     t = time.perf_counter()
     for result in result_arrays:
         job_result = object_from_shared_memory(result)
+        logging.debug("Adding result %s" % job_result)
         result_array = result_array +  job_result
     logging.info("Time spent adding results in the end: %.3f" % (time.perf_counter()-t))
 

@@ -46,6 +46,7 @@ def test_object_to_from_shared_memory():
     remove_shared_memory_in_session()
 
 
+@pytest.mark.skip("Python not supported")
 def test_object_to_from_shared_memory_using_python_backend():
     object = A(np.array([1, 2, 3]), np.array([10.5, 3.0]), np.array([10, 10], dtype=np.uint8))
     to_shared_memory(object, "test3", use_python_backend=True)
@@ -65,5 +66,3 @@ def test_to_shared_memory_without_name():
     object2 = from_shared_memory(A, name)
     assert np.all(object2.a == object.a)
     
-    
-test_object_to_from_shared_memory()

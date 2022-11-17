@@ -9,9 +9,9 @@ import numpy as np
 from itertools import repeat
 from pathos.multiprocessing import Pool
 import inspect
-from . import python_shared_memory
+#from . import python_shared_memory
 from collections import OrderedDict
-from . import posix_shared_memory
+#from . import posix_shared_memory
 
 
 SHARED_MEMORIES_IN_SESSION = []
@@ -102,8 +102,10 @@ def array_from_shared_memory(name, backend="shared_array"):
     if backend == "shared_array":
         return sa.attach(name)
     elif backend == "python":
+        assert False, "Not supported"
         return python_shared_memory.np_array_from_shared_memory(name)
     elif backend == "posix":
+        assert False, "Not supported"
         return posix_shared_memory.np_array_from_shared_memory(name)
     elif backend == "file" or backend == "compressed_file":
         return np.load("." + name + ".npy")
@@ -127,8 +129,10 @@ def array_to_shared_memory(name, array, backend):
             raise
         SHARED_MEMORIES_IN_SESSION.append(name)
     elif backend == "python":
+        assert False, "Not supported"
         python_shared_memory.np_array_to_shared_memory(name, array)
     elif backend == "posix":
+        assert False, "Not supported"
         posix_shared_memory.np_array_to_shared_memory(name, array)
     elif backend == "file" or backend == "compressed_file":
         np.save("." + name + ".npy", array, allow_pickle=True)
@@ -370,7 +374,7 @@ def remove_shared_memory_in_session():
         if os.path.exists(file):
             os.remove(file)
 
-    python_shared_memory.free_memory()
+    #python_shared_memory.free_memory()
 
 def remove_all_shared_memory():
     for shared in sa.list():
