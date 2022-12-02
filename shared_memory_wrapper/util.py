@@ -12,7 +12,8 @@ import itertools
 def interval_chunks(start, end, n_chunks):
     assert end > start
     assert n_chunks > 0
-    boundaries = list(range(start, end, n_chunks))
+    step = max(1, (end-start)//n_chunks)
+    boundaries = list(range(start, end, step))
     boundaries.append(end)
     return [(start, end) for start, end in zip(boundaries[0:-1], boundaries[1:])]
 
