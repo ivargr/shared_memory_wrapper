@@ -39,16 +39,18 @@ class DataBundle:
             func = np.savez
             if self._backend == "compressed_file":
                 func = np.savez_compressed
-            func(self._file_name, **{**{"object": ObjectWrapper(self._object)}, **self._np_arrays})
+            d = {**{"object": ObjectWrapper(self._object)}, **self._np_arrays}
+            func(self._file_name, **d, allow_pickle=True)
         elif self._backend == "shared_array" or self._backend == "python":
             # save object to file, np arrays to shared memory
             np.savez(self._file_name, object=ObjectWrapper(self._object), allow_pickle=True)
             for name, array in self._np_arrays.items():
                 array_to_shared_memory(name, array, self._backend)
+
+            TMP_FILES_IN_SESSION.append(self._file_name)
         else:
             assert False
 
-        TMP_FILES_IN_SESSION.append(self._file_name)
 
     def add_np_array(self, array):
         name = random_name()
@@ -110,5 +112,7 @@ def to_file(object, base_name=None, compress=False):
         base_name = base_name.replace(".npz", "")
 
     backend = "file" if not compress else "compressed_file"
-    return object_to_shared_memory(object, base_name, backend=backend)
+    name = object_to_shared_memory(object, base_name, backend=backend)
+    logging.info("Wrote to file: %s" % name)
+    return name
 

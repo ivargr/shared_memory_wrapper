@@ -2,7 +2,7 @@ import sys
 import logging
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 import pytest
-from shared_memory_wrapper.shared_memory_v2 import object_from_shared_memory, object_to_shared_memory
+from shared_memory_wrapper.shared_memory_v2 import object_from_shared_memory, object_to_shared_memory, to_file, from_file
 import numpy as np
 import copy
 from shared_memory_wrapper import remove_shared_memory_in_session
@@ -27,9 +27,9 @@ def test_to_from_shared_memory_list():
 
 
 def test_to_from_file_nparray():
-    a = np.random.randint(0, 1000, 10000)
-    a2 = object_to_shared_memory(a, "test", "file")
-    a3 = object_from_shared_memory(a2, "file")
+    a = A(np.random.randint(0, 1000, 10000), "test")
+    a2 = to_file(a, "test123", "file")
+    a3 = object_from_shared_memory("test123", "file")
     assert np.all(a == a3)
 
 
@@ -57,6 +57,14 @@ def test(data, backend):
 
     assert true == data2
     remove_shared_memory_in_session()
+
+
+def test_index_bundle():
+    from kage.indexing.index_bundle import IndexBundle
+    bundle = IndexBundle({"a": np.array([1, 2, 3])})
+    name = to_file(bundle)
+    bundle2 = from_file(name)
+    assert np.all(bundle2.a == [1, 2, 3])
 
 
 @pytest.fixture(scope="session", autouse=True)

@@ -1,6 +1,7 @@
 import logging
 import multiprocessing
-from .shared_memory import object_to_shared_memory, object_from_shared_memory, remove_shared_memory
+from .shared_memory_v2 import object_to_shared_memory, object_from_shared_memory
+from .shared_memory import remove_shared_memory
 from collections.abc import Iterable
 from .shared_memory import get_shared_pool, close_shared_pool
 import resource

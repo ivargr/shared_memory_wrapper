@@ -319,9 +319,8 @@ def _object_from_shared_memory(name, description, data_bundle, backend="shared_a
             raise Exception("Error: %s" % description)
     else:
         # has children
-        print("   Has children")
         if issubclass(list, object_type) or issubclass(tuple, object_type):
-            print("      TUple with children: %s" % children)
+            #print("      TUple with children: %s" % children)
             return object_type([_object_from_shared_memory(name + "-" + str(i), e, data_bundle, backend)
                     for i, e in enumerate(children)])
         elif issubclass(dict, object_type):

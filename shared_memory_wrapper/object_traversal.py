@@ -48,7 +48,6 @@ def replace_object_attributes_recursively(object, func, ignore_types=None):
             raise
 
         for attr, value in items:
-            print("Attribute ", attr)
             setattr(object, attr, replace_object_attributes_recursively(value, func, ignore_types))
 
         return func(object)
