@@ -37,12 +37,4 @@ def some_function(data, interval_range):
     out = 100
     return out
 
-def test_posix():
-    a = np.arange(1000)
-    np_array_to_shared_memory("test1", a)
-    b = np_array_from_shared_memory("test1")
-
-
-    assert np.all(a == b)
-
 

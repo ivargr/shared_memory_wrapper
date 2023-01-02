@@ -1,9 +1,11 @@
 import logging
 logging.basicConfig(level=logging.INFO)
 import numpy as np
-from shared_memory_wrapper.shared_memory import object_to_shared_memory, object_from_shared_memory
+#from shared_memory_wrapper.shared_memory import object_to_shared_memory, object_from_shared_memory
+from shared_memory_wrapper.shared_memory_v2 import object_to_shared_memory, object_from_shared_memory
 from shared_memory_wrapper import free_memory_in_session
-from shared_memory_wrapper import to_file, from_file
+from shared_memory_wrapper.shared_memory_v2 import to_file, from_file
+import copy
 
 
 class B:
@@ -41,12 +43,13 @@ def _get_dummy_object():
 
 def test():
     a = A(5, B(np.array([1, 2, 3])), np.array([4, 3, 1]))
+    true = copy.deepcopy(a)
     name = object_to_shared_memory(a)
     a2 = object_from_shared_memory(name)
 
-    assert np.all(a2._number == a._number)
-    assert np.all(a2._object._array == a._object._array)
-    assert np.all(a2._array == a._array)
+    assert np.all(a2._number == true._number)
+    assert np.all(a2._object._array == true._object._array)
+    assert np.all(a2._array == true._array)
 
 
 def test2():
@@ -66,23 +69,24 @@ def test_counter():
 
 
     counter = Counter([1,2, 3])
+    true = copy.deepcopy(counter)
     name = object_to_shared_memory(counter)
     counter2 = object_from_shared_memory(name)
 
-    counter.count([1, 2, 3])
+    true.count([1, 2, 3])
     counter2.count([1,  2, 3])
 
-    assert np.all(counter[1, 2, 3] == counter2[1, 2, 3])
+    assert np.all(true[1, 2, 3] == counter2[1, 2, 3])
 
 
 def test_various_backends():
-
     for backend in ["shared_array", "python", "file"]:
         print(backend)
         a = _get_dummy_object()
+        true = copy.deepcopy(a)
         name = object_to_shared_memory(a, backend="file")
         a2 = object_from_shared_memory(name, backend="file")
-        assert a2 == a
+        assert a2 == true
 
 
 
@@ -91,7 +95,7 @@ def test_to_from_file():
     to_file(object, "testobject")
     object2 = from_file("testobject")
 
-    assert object == object2
+    assert _get_dummy_object() == object2
 
 
 
@@ -139,12 +143,9 @@ def test_list_object():
     assert object2[2] == 3
 
 
-
-
 def test_single_base_types():
     name = object_to_shared_memory("test")
     assert object_from_shared_memory(name) == "test"
-
     assert object_from_shared_memory(object_to_shared_memory(5.1)) == 5.1
 
 
@@ -176,11 +177,10 @@ def test_tuple():
 
 def test_dict():
     d = {"test": 1, "test2": "hi"}
+    true = d.copy()
     name = object_to_shared_memory(d)
     d2 = object_from_shared_memory(name)
-
-    print(d2)
-    assert d == d2
+    assert true == d2
 
 
 def __test_multi_hashtable():
@@ -191,6 +191,7 @@ def __test_multi_hashtable():
     print(h[1], h2[1])
     assert h[1]["key1"] == h2[1]["key1"]
     assert h[3] == h2[3]
+
 
 def test_set():
     a = set([1, 5, 3, 4])
@@ -205,39 +206,24 @@ def test_obgraph():
         {1: [2, 3], 2: [4], 3: [4]},
         [1, 2, 4]
     )
+    true = copy.deepcopy(graph)
 
     g = object_to_shared_memory(graph)
     g2 = object_from_shared_memory(g)
 
-    assert g2.chromosome_start_nodes == graph.chromosome_start_nodes
+    assert g2.chromosome_start_nodes == true.chromosome_start_nodes
+    assert g2 == true
 
 
 def test_compressed_file():
     from obgraph import Graph
     a = A(100, A(100, C("hello", 3.0), np.array([1])), np.array([1, 2, 3], dtype=float))
+    true = copy.deepcopy(a)
 
     to_file(a, "test.tmp", compress=True)
     a2 = from_file("test.tmp")
 
-    print(a2)
-    assert a == a2
+    assert true == a2
 
-
-#test_kmer_index_counter()
-test()
-test2()
-test_counter()
-test_various_backends()
-test_to_from_file()
-test_list_object()
-test_single_base_types()
-test_list()
-test_dict()
-#__test_multi_hashtable()
-test_set()
-test_tuple()
-
-
-free_memory_in_session()
 
 

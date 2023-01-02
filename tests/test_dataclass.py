@@ -16,6 +16,7 @@ def test():
     a2 = from_file("test.tmp")
 
     print(a, a2)
+    assert a == a2
 
 
 test()

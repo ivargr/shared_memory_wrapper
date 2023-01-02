@@ -21,7 +21,6 @@ def test_addititative():
         func, mapper, result_array, data, n_threads=4
     )
 
-    print(results)
 
 
 test_addititative()

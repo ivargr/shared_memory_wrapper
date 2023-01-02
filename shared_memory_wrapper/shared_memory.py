@@ -107,13 +107,19 @@ def array_from_shared_memory(name, backend="shared_array"):
     elif backend == "posix":
         assert False, "Not supported"
         return posix_shared_memory.np_array_from_shared_memory(name)
-    elif backend == "file" or backend == "compressed_file":
+    elif backend == "file":
         return np.load("." + name + ".npy")
+    elif backend == "compressed_file":
+        return np.load("." + name + ".npz")["arr_0"]
     else:
         raise Exception("Invalid backend %s" % backend)
 
 
 def array_to_shared_memory(name, array, backend):
+    if name is None:
+        name = random_name()
+
+    assert isinstance(name, str)
     global SHARED_MEMORIES_IN_SESSION
     if backend == "shared_array":
         try:
@@ -134,11 +140,14 @@ def array_to_shared_memory(name, array, backend):
     elif backend == "posix":
         assert False, "Not supported"
         posix_shared_memory.np_array_to_shared_memory(name, array)
-    elif backend == "file" or backend == "compressed_file":
+    elif backend == "file":
         np.save("." + name + ".npy", array, allow_pickle=True)
+    elif backend == "compressed_file":
+        np.savez_compressed("." + name + ".npz", array, allow_pickle=True)
     else:
         raise Exception("Invalid backend %s" % backend)
 
+    return name
 
 
 def base_type_to_shared_memory(object, name):
@@ -164,11 +173,15 @@ def to_file(object, base_name=None, compress=False):
     return object_to_shared_memory(object, base_name, backend=backend)
 
 
+def random_name():
+    random_generator = random.Random()  # create new generator so seed does not affect
+    return str(random_generator.randint(0, 10e15))
+
+
 def object_to_shared_memory(object, base_name=None, backend="shared_array"):
     t = time.perf_counter()
     if base_name is None:
-        random_generator = random.Random()  # create new generator so seed does not affect
-        base_name = str(random_generator.randint(0, 10e15))
+        base_name = random_name()
 
     data_bundle = DataBundle(base_name, backend)
 
@@ -195,6 +208,14 @@ def _object_is_basetype(object):
     return False
 
 
+def _is_iterable(object):
+    try:
+        iter(object)
+        return True
+    except TypeError:
+        return False
+
+
 def _object_to_shared_memory(object, name, data_bundle, backend="shared_array"):
     """
     Function will be called recursively. Responsibility: Put object in shared memory,
@@ -216,6 +237,13 @@ def _object_to_shared_memory(object, name, data_bundle, backend="shared_array"):
     elif issubclass(dict, object.__class__):
         return (object.__class__, {key: _object_to_shared_memory(value, name + "-" + str(key), data_bundle, backend)
                                    for key, value in object.items()})
+    elif _is_iterable(object):
+        # if iterable and non of above, assume we can wrap in a tuple
+        print("Is iterable, wrapping in tuple")
+        return (object.__class__, tuple(_object_to_shared_memory(element, name + "-" + str(i), data_bundle, backend)
+                                   for i, element in enumerate(object)))
+        #return (object.__class__, _object_to_shared_memory(tuple(object), name + "-" + str(object.__class__.__name__),
+        #                                                   data_bundle, backend))
     else:
         # is an object with possibly children
         # go through children and put these in shared memory
@@ -226,14 +254,22 @@ def _object_to_shared_memory(object, name, data_bundle, backend="shared_array"):
             if not hasattr(object, variable_name):
                 variable_name = "_" + variable_name
                 if not (hasattr(object, variable_name)):
-                    logging.warning("Object %s has init argument %s, but no property with the same name. Ignoring" % (
-                    object, variable_name))
-                    continue
+                    # last attempt: Try finding private variables
+                    for possible_var in object.__dict__.keys():
+                        if "__" in possible_var:
+                            if possible_var.split("__")[1] == variable_name[1:]:
+                                variable_name = possible_var
+                                break
+                    if not (hasattr(object, variable_name)):
+                        logging.warning("Object %s has init argument %s, but no property with the same name. Ignoring" % (
+                        object, variable_name))
+                        continue
 
             variable_data = getattr(object, variable_name)
             child_shared_memory_name = name + "-" + variable_name
             description[variable_name] = _object_to_shared_memory(variable_data, child_shared_memory_name, data_bundle, backend)
 
+        print("Description after %s: %s" % (variable_names, description))
         return (object.__class__, description)
 
 
@@ -254,6 +290,7 @@ def object_from_shared_memory(name, backend="shared_array"):
             raise
 
     description = data_bundle["__description"]
+    print("Loading with description %s" % description)
     if "/" in name:
         logging.info("Base name is a file path: %s" % name)
         name = name.split("/")[-1]
@@ -265,6 +302,7 @@ def object_from_shared_memory(name, backend="shared_array"):
 def _object_from_shared_memory(name, description, data_bundle, backend="shared_array"):
     #print("object from shared memory %s, class %s, description %s" % (name, cls, description))
     object_type, children = description
+    print("Object type: %s, desc: %s"  % (object_type, children))
 
     if children is None:
         # no children
@@ -281,7 +319,9 @@ def _object_from_shared_memory(name, description, data_bundle, backend="shared_a
             raise Exception("Error: %s" % description)
     else:
         # has children
+        print("   Has children")
         if issubclass(list, object_type) or issubclass(tuple, object_type):
+            print("      TUple with children: %s" % children)
             return object_type([_object_from_shared_memory(name + "-" + str(i), e, data_bundle, backend)
                     for i, e in enumerate(children)])
         elif issubclass(dict, object_type):
@@ -294,6 +334,7 @@ def _object_from_shared_memory(name, description, data_bundle, backend="shared_a
                 shared_memory_name = name + "-" + child_name
                 data.append(_object_from_shared_memory(shared_memory_name, child_description, data_bundle, backend))
 
+            print("Returning object with data %s" % data)
             return object_type(*data)
 
 
@@ -373,6 +414,8 @@ def remove_shared_memory_in_session():
     for file in TMP_FILES_IN_SESSION:
         if os.path.exists(file):
             os.remove(file)
+        if os.path.exists(file + ".npz"):
+            os.remove(file + ".npz")
 
     #python_shared_memory.free_memory()
 

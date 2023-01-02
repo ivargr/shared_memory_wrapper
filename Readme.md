@@ -2,7 +2,6 @@
 
 A very simple wrapper around the Python package [Shared Array](https://pypi.org/project/SharedArray/). Consists of a few helper functions and classer to make it easier to use the Shared Array package on objects with multiple numpy arrays.
 
-The aim of this package is to enable sharing many types of Python objects in memory. When objects contain Numpy arrays, these will be very efficiently shared using the Shared Array package. Other objects like strings, ints etc are simply pickled (not really shared in memory).
 
 
 ### Installation
@@ -16,9 +15,7 @@ pip install shared_memory_wrapper
 from shared_memory_wrapper import object_to_shared_memory, object_from_shared_memory
 ```
 
-All objects that follow these rules can be put into shared memory:
-* All arguments to the init method must be numpy ndarrays or ints.
-* All these variables must be stored in instance variables that match their argument names (alternatively with an underscore first).
+
 
 Example:
 ```python
