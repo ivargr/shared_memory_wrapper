@@ -1,3 +1,4 @@
+import copy
 import logging
 logging.basicConfig(level=logging.INFO)
 import pytest
@@ -32,13 +33,14 @@ def test_object_init_arguments():
 
 def test_object_to_from_shared_memory():
     object = A(np.array([1, 2, 3]), np.array([10.5, 3.0]), np.array([10, 10], dtype=np.uint8))
+    true = copy.deepcopy(object)
     name = object_to_shared_memory(object)
 
     object2 = object_from_shared_memory(name)
     object3 = object_from_shared_memory(name)
 
     assert object2.c.dtype == np.uint8
-    assert np.all(object2.a == object.a)
+    assert np.all(object2.a == true.a)
     object2.a[0] = 0
     assert object3.a[0] == 0
     print("Done")
