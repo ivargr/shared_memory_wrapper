@@ -67,6 +67,21 @@ def test_index_bundle():
     assert np.all(bundle2.a == [1, 2, 3])
 
 
+
+class B:
+    def __init__(self, b):
+        self.b = b
+
+    def __getattr__(self, item):
+        raise AttributeError()
+
+
+def test_pickle():
+    b = B(2)
+    np.savez("test.npz", object=b, allow_pickle=True)
+    b2 = np.load("test.npz", allow_pickle=True)
+    print(b2["object"])
+
 @pytest.fixture(scope="session", autouse=True)
 def cleanup(request):
     print("CLEANUP!")

@@ -12,7 +12,7 @@ class build_ext(_build_ext):
         self.include_dirs.append(numpy.get_include())
 
 setup(name='shared_memory_wrapper',
-      version='0.0.22',
+      version='0.0.23',
       description='Shared Memory Wrapper',
       url='http://github.com/ivargr/shared_memory_wrapper',
       author='Ivar Grytten',
