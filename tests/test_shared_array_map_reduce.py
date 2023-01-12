@@ -7,7 +7,6 @@ import time
 
 def func(a, b, c, chunk):
     time.sleep(0.1)
-    print("Running %s" % chunk)
     return np.zeros(10) + b + chunk
 
 
@@ -16,12 +15,8 @@ def test_addititative():
     mapper = range(50)
     result_array = np.zeros(10)
 
-
     results = additative_shared_array_map_reduce(
         func, mapper, result_array, data, n_threads=4
     )
 
 
-
-test_addititative()
-#test_chunked_addititative()

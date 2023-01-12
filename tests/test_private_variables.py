@@ -2,8 +2,9 @@ import copy
 import logging
 logging.basicConfig(level=logging.DEBUG)
 from shared_memory_wrapper.shared_memory_v2 import object_to_shared_memory, object_from_shared_memory
+from shared_memory_wrapper import remove_shared_memory_in_session
 import numpy as np
-
+import pytest
 
 class A:
     def __init__(self, a, b):
@@ -46,3 +47,10 @@ def test3():
     r3 = object_from_shared_memory(r2)
 
     assert np.all(true == r3)
+
+
+@pytest.fixture(scope="function", autouse=True)
+def cleanup(request):
+    yield  # pytest will run tests
+    remove_shared_memory_in_session()
+

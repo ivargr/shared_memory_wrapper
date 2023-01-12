@@ -68,3 +68,11 @@ def test_to_shared_memory_without_name():
     object2 = from_shared_memory(A, name)
     assert np.all(object2.a == object.a)
     
+
+
+@pytest.fixture(scope="function", autouse=True)
+def cleanup(request):
+    yield  # pytest will run tests
+    remove_shared_memory_in_session()
+
+

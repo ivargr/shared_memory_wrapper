@@ -239,7 +239,6 @@ def _object_to_shared_memory(object, name, data_bundle, backend="shared_array"):
                                    for key, value in object.items()})
     elif _is_iterable(object):
         # if iterable and non of above, assume we can wrap in a tuple
-        print("Is iterable, wrapping in tuple")
         return (object.__class__, tuple(_object_to_shared_memory(element, name + "-" + str(i), data_bundle, backend)
                                    for i, element in enumerate(object)))
         #return (object.__class__, _object_to_shared_memory(tuple(object), name + "-" + str(object.__class__.__name__),
@@ -269,7 +268,6 @@ def _object_to_shared_memory(object, name, data_bundle, backend="shared_array"):
             child_shared_memory_name = name + "-" + variable_name
             description[variable_name] = _object_to_shared_memory(variable_data, child_shared_memory_name, data_bundle, backend)
 
-        print("Description after %s: %s" % (variable_names, description))
         return (object.__class__, description)
 
 
@@ -290,7 +288,6 @@ def object_from_shared_memory(name, backend="shared_array"):
             raise
 
     description = data_bundle["__description"]
-    print("Loading with description %s" % description)
     if "/" in name:
         logging.info("Base name is a file path: %s" % name)
         name = name.split("/")[-1]
@@ -300,9 +297,7 @@ def object_from_shared_memory(name, backend="shared_array"):
 
 
 def _object_from_shared_memory(name, description, data_bundle, backend="shared_array"):
-    #print("object from shared memory %s, class %s, description %s" % (name, cls, description))
     object_type, children = description
-    print("Object type: %s, desc: %s"  % (object_type, children))
 
     if children is None:
         # no children
@@ -327,13 +322,11 @@ def _object_from_shared_memory(name, description, data_bundle, backend="shared_a
             return object_type((key_name, _object_from_shared_memory(name + "-" + str(key_name), child_desc, data_bundle, backend))
                                 for key_name, child_desc in children.items())
         else:
-            #print("Has children: %s" % str((description)))
             data = []
             for child_name, child_description in children.items():
                 shared_memory_name = name + "-" + child_name
                 data.append(_object_from_shared_memory(shared_memory_name, child_description, data_bundle, backend))
 
-            print("Returning object with data %s" % data)
             return object_type(*data)
 
 
@@ -396,6 +389,18 @@ def remove_shared_memory(name):
         if m.startswith(name + "__") or m.startswith(name + "-") or m == name:
             sa.delete(m)
             n_deleted += 1
+            if m in SHARED_MEMORIES_IN_SESSION:
+                SHARED_MEMORIES_IN_SESSION.remove(m)
+
+    # if object contained no numpy arrays, no shared memory"
+    # was needed, but we may still have a file
+    if "__" not in name:
+        # not a subname
+        SHARED_MEMORIES_IN_SESSION.remove(name)
+        file = name + ".npz"
+        os.remove(file)
+        TMP_FILES_IN_SESSION.remove(name)
+        n_deleted += 1
 
     if n_deleted == 0:
         logging.warning("No shared memory with name %s" % name)
@@ -404,23 +409,17 @@ def remove_shared_memory(name):
 
 def remove_shared_memory_in_session():
     for name in SHARED_MEMORIES_IN_SESSION:
-        try:
-            sa.delete(name)
-        except FileNotFoundError:
-            pass
-            #logging.warning("Tried to deleted shared memory %s that did not exist" % name)
+        remove_shared_memory(name)
 
-    for file in TMP_FILES_IN_SESSION:
-        if os.path.exists(file):
-            os.remove(file)
-        if os.path.exists(file + ".npz"):
-            os.remove(file + ".npz")
-
-    #python_shared_memory.free_memory()
 
 def remove_all_shared_memory():
+    global SHARED_MEMORIES_IN_SESSION
     for shared in sa.list():
-        sa.delete(shared.name.decode("utf-8"))
+        name = shared.name.decode("utf-8")
+        sa.delete(name)
+        if name in SHARED_MEMORIES_IN_SESSION:
+            SHARED_MEMORIES_IN_SESSION.remove(name)
+
 
 def free_memory():
     remove_all_shared_memory()

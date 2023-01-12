@@ -3,7 +3,10 @@ import logging
 import time
 import numpy as np
 import os
-from .shared_memory import get_shared_pool, remove_shared_memory, object_to_shared_memory, object_from_shared_memory
+
+import shared_memory_wrapper.shared_memory
+from .shared_memory_v2 import object_to_shared_memory, object_from_shared_memory
+from .shared_memory import remove_shared_memory
 from multiprocessing import Pool, Queue, Process
 import queue
 from .util import chunker
@@ -62,7 +65,7 @@ def additative_shared_array_map_reduce(func, mapper, result_array, shared_data, 
     result_arrays = [
         object_to_shared_memory(np.zeros_like(result_array)) for _ in range(n_threads)
     ]
-    functions = FunctionWrapper(func, shared_data_id)
+    #functions = FunctionWrapper(func, shared_data_id)
     processes = [Process(target=FunctionWrapper(func, shared_data_id), args=(shared_queue,result_array)) for result_array in result_arrays]
 
     # start all processes
@@ -94,8 +97,10 @@ def additative_shared_array_map_reduce(func, mapper, result_array, shared_data, 
     t = time.perf_counter()
     for result in result_arrays:
         job_result = object_from_shared_memory(result)
-        logging.debug("Adding result %s" % job_result)
-        result_array = result_array +  job_result
+        remove_shared_memory(result)
+        result_array = result_array + job_result
     logging.info("Time spent adding results in the end: %.3f" % (time.perf_counter()-t))
+
+    remove_shared_memory(shared_data_id)
 
     return result_array

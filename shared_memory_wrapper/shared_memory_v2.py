@@ -1,6 +1,6 @@
 from .object_traversal import replace_object_attributes_recursively
 from .shared_memory import array_to_shared_memory, array_from_shared_memory, random_name
-from .shared_memory import TMP_FILES_IN_SESSION
+from .shared_memory import TMP_FILES_IN_SESSION, SHARED_MEMORIES_IN_SESSION
 import numpy as np
 import pickle
 import logging
@@ -48,12 +48,13 @@ class DataBundle:
                 array_to_shared_memory(name, array, self._backend)
 
             TMP_FILES_IN_SESSION.append(self._file_name)
+            SHARED_MEMORIES_IN_SESSION.append(self._file_name)
         else:
             assert False
 
 
     def add_np_array(self, array):
-        name = random_name()
+        name = self._file_name + "__" + random_name()  # give a name that is a subname of our base name
         self._np_arrays[name] = array
         return name
 

@@ -17,6 +17,3 @@ def test():
 
     print(a, a2)
     assert a == a2
-
-
-test()

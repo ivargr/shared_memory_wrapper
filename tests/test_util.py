@@ -8,6 +8,7 @@ import multiprocessing
 from shared_memory_wrapper.util import Mapper, Reducer, SumReducer
 from shared_memory_wrapper.util import interval_chunks
 from shared_memory_wrapper.util import parallel_map_reduce
+from shared_memory_wrapper import remove_shared_memory_in_session
 
 
 def test_interval_chunks():
@@ -77,4 +78,10 @@ def test_map_reduce_matrix_adder():
     inital = np.zeros((10, 10))
 
 
+
+@pytest.fixture(scope="session", autouse=True)
+def cleanup(request):
+    print("cleanup!")
+    print("finished")
+    remove_shared_memory_in_session()
 

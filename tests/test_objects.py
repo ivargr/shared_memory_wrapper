@@ -1,10 +1,14 @@
 import logging
 logging.basicConfig(level=logging.INFO)
+import pytest
+import os
 import numpy as np
 #from shared_memory_wrapper.shared_memory import object_to_shared_memory, object_from_shared_memory
 from shared_memory_wrapper.shared_memory_v2 import object_to_shared_memory, object_from_shared_memory
 from shared_memory_wrapper import free_memory_in_session
+from shared_memory_wrapper import remove_shared_memory_in_session
 from shared_memory_wrapper.shared_memory_v2 import to_file, from_file
+from shared_memory_wrapper.shared_memory import TMP_FILES_IN_SESSION
 import copy
 
 
@@ -80,14 +84,16 @@ def test_counter():
 
 
 def test_various_backends():
-    for backend in ["shared_array", "python", "file"]:
+    for backend in ["shared_array", "file"]:
         print(backend)
         a = _get_dummy_object()
         true = copy.deepcopy(a)
-        name = object_to_shared_memory(a, backend="file")
-        a2 = object_from_shared_memory(name, backend="file")
+        name = object_to_shared_memory(a, backend=backend)
+        a2 = object_from_shared_memory(name, backend=backend)
         assert a2 == true
 
+        if backend == "file":
+            os.remove(name + ".npz")
 
 
 def test_to_from_file():
@@ -114,8 +120,8 @@ def test_kmer_index_counter():
     counter.count([1])
     print(index.counter._values)
     #index.counter.count([1])
-    index = to_file(index)
-    index2 = object_to_shared_memory(from_file(index))
+    to_file(index, "testindex")
+    index2 = object_to_shared_memory(from_file("testindex"))
 
 
     index3 = object_from_shared_memory(index2)
@@ -226,4 +232,9 @@ def test_compressed_file():
     assert true == a2
 
 
+
+@pytest.fixture(scope="function", autouse=True)
+def cleanup(request):
+    yield  # pytest will run tests
+    remove_shared_memory_in_session()
 

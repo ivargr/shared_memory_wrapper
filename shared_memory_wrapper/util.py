@@ -190,11 +190,12 @@ def parallel_map_reduce(function, data, mapper, reducer=None, n_threads=7, backe
     close_shared_pool()
 
     if reducer is not None:
-        return reducer.get_final_result()
+        out = reducer.get_final_result()
     else:
-        data = object_from_shared_memory(data, backend=backend)
-        return data
+        out = object_from_shared_memory(data, backend=backend)
 
+    remove_shared_memory(data)
+    return out
 
 def log_memory_usage(logplace=""):
     memory = int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss) / 1000000
