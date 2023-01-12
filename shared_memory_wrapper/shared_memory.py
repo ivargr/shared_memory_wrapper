@@ -396,15 +396,16 @@ def remove_shared_memory(name):
     # was needed, but we may still have a file
     if "__" not in name:
         # not a subname
-        SHARED_MEMORIES_IN_SESSION.remove(name)
+        if name in SHARED_MEMORIES_IN_SESSION:
+            SHARED_MEMORIES_IN_SESSION.remove(name)
         file = name + ".npz"
-        os.remove(file)
-        TMP_FILES_IN_SESSION.remove(name)
-        n_deleted += 1
+        if os.path.exists(file):
+            os.remove(file)
 
-    if n_deleted == 0:
-        logging.warning("No shared memory with name %s" % name)
-        logging.warning("Available shared memories: %s" % shared_memories)
+        if name in TMP_FILES_IN_SESSION:
+            TMP_FILES_IN_SESSION.remove(name)
+
+        n_deleted += 1
 
 
 def remove_shared_memory_in_session():
