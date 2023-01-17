@@ -13,7 +13,6 @@ import inspect
 from collections import OrderedDict
 #from . import posix_shared_memory
 
-
 SHARED_MEMORIES_IN_SESSION = []
 TMP_FILES_IN_SESSION = []
 
@@ -452,6 +451,10 @@ def run_numpy_based_function_in_parallel(function, n_threads, arguments):
     # put each in shared memory
     # run function on chunk on separete thread, put in result array
     # return result array
+    if n_threads == 1:
+        logging.info("n_threads is 1. Not running in paralell")
+        return function(*arguments)
+
     new_arguments = []
 
     # Put np arrays in shared memory, everything else we keep as is
@@ -483,11 +486,15 @@ def run_numpy_based_function_in_parallel(function, n_threads, arguments):
     #logging.info("Will run on intervals %s" % intervals)
 
     results = []
-    for result in pool.starmap(_run_numpy_based_function_on_shared_memory_arguments, zip(repeat(function), repeat(new_arguments), intervals)):
-        result = from_shared_memory(SingleSharedArray, result).array
+    for result_name in pool.starmap(_run_numpy_based_function_on_shared_memory_arguments, zip(repeat(function), repeat(new_arguments), intervals)):
+        result = from_shared_memory(SingleSharedArray, result_name).array
         results.append(result)
+        remove_shared_memory(result_name)
 
-    #close_shared_pool()
+    # Free memory for arrays used
+    for argument in new_arguments:
+        if isinstance(argument, str):
+            remove_shared_memory(argument)
 
     t = time.perf_counter()
     results = np.concatenate(results)
