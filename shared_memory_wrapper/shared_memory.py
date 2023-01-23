@@ -380,8 +380,12 @@ def to_shared_memory(object, name=None, use_python_backend=False):
     return name
 
 
-def remove_shared_memory(name):
-    shared_memories = [s.name.decode("utf-8") for s in sa.list()]
+def remove_shared_memory(name, limit_to_session=False):
+    if limit_to_session:
+        shared_memories = SHARED_MEMORIES_IN_SESSION
+    else:
+        shared_memories = [s.name.decode("utf-8") for s in sa.list()]
+
 
     n_deleted = 0
     for m in shared_memories:
@@ -489,12 +493,12 @@ def run_numpy_based_function_in_parallel(function, n_threads, arguments):
     for result_name in pool.starmap(_run_numpy_based_function_on_shared_memory_arguments, zip(repeat(function), repeat(new_arguments), intervals)):
         result = from_shared_memory(SingleSharedArray, result_name).array
         results.append(result)
-        remove_shared_memory(result_name)
+        sa.delete(result_name + "__array")
 
     # Free memory for arrays used
     for argument in new_arguments:
         if isinstance(argument, str):
-            remove_shared_memory(argument)
+            remove_shared_memory(argument, limit_to_session=True)
 
     t = time.perf_counter()
     results = np.concatenate(results)
