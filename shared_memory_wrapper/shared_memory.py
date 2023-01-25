@@ -410,6 +410,9 @@ def remove_shared_memory(name, limit_to_session=False):
 
         n_deleted += 1
 
+    if n_deleted == 0:
+        logging.debug("Did not find anything to delete fro %s" % name)
+
 
 def remove_shared_memory_in_session():
     for name in SHARED_MEMORIES_IN_SESSION:
@@ -467,7 +470,9 @@ def run_numpy_based_function_in_parallel(function, n_threads, arguments):
         # don't split ndarrays with shape[0] == 1
         if isinstance(argument, np.ndarray) and argument.shape[0] != 1:
             argument_id = str(np.random.randint(0, 10e15))
+            t0 = time.perf_counter()
             to_shared_memory(SingleSharedArray(argument), argument_id)
+            logging.info("Time to write to shared memory: %.3f" % (time.perf_counter()-t0))
             new_arguments.append(argument_id)
             if array_length != 0 and array_length != argument.shape[0]:
                 logging.error("Found argument with different shape")

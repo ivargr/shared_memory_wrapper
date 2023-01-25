@@ -80,8 +80,9 @@ def additative_shared_array_map_reduce(func, mapper, result_array, shared_data, 
         t = time.perf_counter()
 
         # don't make queue too big
-        while shared_queue.qsize() > n_threads*3:
-            logging.debug("Waiting to get more elements since queue is quite full")
+        max_queue = n_threads*0.5
+        while shared_queue.qsize() > max_queue:
+            logging.debug("Waiting to get more elements since queue is quite full. Max queue size is %d" % max_queue)
             logging.debug("Approx queue size now is %d" % shared_queue.qsize())
             time.sleep(0.1)
 
