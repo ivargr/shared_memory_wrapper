@@ -435,11 +435,22 @@ def free_memory():
 def free_memory_in_session():
     remove_shared_memory_in_session()
 
-def _run_numpy_based_function_on_shared_memory_arguments(function, arguments, interval):
+def _run_numpy_based_function_on_shared_memory_arguments(function, input_arguments, interval):
     start_time = time.perf_counter()
     start, end = interval
     #logging.info("Running on interval %d-%d" % (start, end))
-    arguments = [from_shared_memory(SingleSharedArray, a).array if type(a) == str else a for a in arguments]
+    arguments = []
+    for a in input_arguments:
+        if isinstance(a, str):
+            try:
+                object = from_shared_memory(SingleSharedArray, a).array
+                arguments.append(object)
+            except FileNotFoundError:
+                logging.debug("Did not find shared memory %s. Assuming this is a real string and not a shared memory name" % a)
+                arguments.append(a)
+        else:
+            arguments.append(a)
+
     sliced_arguments = []
     for argument in arguments:
         if isinstance(argument, np.ndarray) and argument.shape[0] != 1:
