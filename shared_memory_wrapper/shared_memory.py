@@ -464,7 +464,7 @@ def _run_numpy_based_function_on_shared_memory_arguments(function, input_argumen
     return shared_memory_name
 
 
-def run_numpy_based_function_in_parallel(function, n_threads, arguments):
+def run_numpy_based_function_in_parallel(function, n_threads, arguments, chunks=None):
     # split every argument that is not an int
     # put each in shared memory
     # run function on chunk on separete thread, put in result array
@@ -501,9 +501,14 @@ def run_numpy_based_function_in_parallel(function, n_threads, arguments):
     t = time.perf_counter()
     pool = get_shared_pool(n_threads)  # Pool(n_threads)
 
-    intervals = list([int(i) for i in np.linspace(0, array_length, n_threads + 1)])
-    intervals = [(from_pos, to_pos) for from_pos, to_pos in zip(intervals[0:-1], intervals[1:])]
-    #logging.info("Will run on intervals %s" % intervals)
+    if chunks is None:
+        intervals = list([int(i) for i in np.linspace(0, array_length, n_threads + 1)])
+        intervals = [(from_pos, to_pos) for from_pos, to_pos in zip(intervals[0:-1], intervals[1:])]
+    else:
+        logging.debug("Using predefined chunks")
+        intervals = chunks
+
+    logging.info("Will run on intervals %s" % intervals)
 
     results = []
     for result_name in pool.starmap(_run_numpy_based_function_on_shared_memory_arguments, zip(repeat(function), repeat(new_arguments), intervals)):
