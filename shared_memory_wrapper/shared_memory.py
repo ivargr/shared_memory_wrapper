@@ -390,8 +390,12 @@ def remove_shared_memory(name, limit_to_session=False):
     n_deleted = 0
     for m in shared_memories:
         if m.startswith(name + "__") or m.startswith(name + "-") or m == name:
-            sa.delete(m)
-            n_deleted += 1
+            try:
+                sa.delete(m)
+                n_deleted += 1
+            except FileNotFoundError:
+                logging.debug("Did not delete %s" % m)
+                continue
             if m in SHARED_MEMORIES_IN_SESSION:
                 SHARED_MEMORIES_IN_SESSION.remove(m)
 
