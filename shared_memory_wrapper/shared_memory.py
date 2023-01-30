@@ -416,7 +416,7 @@ def remove_shared_memory(name, limit_to_session=False):
 
 def remove_shared_memory_in_session():
     for name in SHARED_MEMORIES_IN_SESSION:
-        remove_shared_memory(name)
+        remove_shared_memory(name, True)
 
 
 def remove_all_shared_memory():
