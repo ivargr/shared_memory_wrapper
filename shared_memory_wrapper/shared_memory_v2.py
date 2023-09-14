@@ -114,6 +114,6 @@ def to_file(object, base_name=None, compress=False):
 
     backend = "file" if not compress else "compressed_file"
     name = object_to_shared_memory(object, base_name, backend=backend)
-    logging.info("Wrote to file: %s" % name)
+    #logging.info("Wrote to file: %s" % name)
     return name
 

@@ -55,16 +55,18 @@ class FunctionWrapper:
             t_prev_job = time.perf_counter()
 
 
-def additative_shared_array_map_reduce(func, mapper, result_array, shared_data, n_threads=4):
+def additative_shared_array_map_reduce(func, mapper, result_array, shared_data, n_threads=4, queue_size_factor=0.5):
     #pool = get_shared_pool()
     shared_queue = Queue()
     shared_data_id = object_to_shared_memory(shared_data)
 
     # make the processes
     # make a new result array for each process
+    t0 = time.perf_counter()
     result_arrays = [
         object_to_shared_memory(np.zeros_like(result_array)) for _ in range(n_threads)
     ]
+    print("Creating shared memory result arrays took %.4f sec" % (time.perf_counter()-t0))
     #functions = FunctionWrapper(func, shared_data_id)
     processes = [Process(target=FunctionWrapper(func, shared_data_id), args=(shared_queue,result_array)) for result_array in result_arrays]
 
@@ -80,7 +82,7 @@ def additative_shared_array_map_reduce(func, mapper, result_array, shared_data, 
         t = time.perf_counter()
 
         # don't make queue too big
-        max_queue = n_threads*0.5
+        max_queue = n_threads * queue_size_factor
         while shared_queue.qsize() > max_queue:
             logging.debug("Waiting to get more elements since queue is quite full. Max queue size is %d" % max_queue)
             logging.debug("Approx queue size now is %d" % shared_queue.qsize())
