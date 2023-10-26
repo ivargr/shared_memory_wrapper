@@ -8,7 +8,7 @@ import resource
 import tracemalloc
 import numpy as np
 import itertools
-
+from typing import Tuple
 
 def interval_chunks(start, end, n_chunks):
     assert end > start
@@ -168,7 +168,7 @@ def chunked_imap(pool, function, iterable, chunk_size=10):
             return
 
 
-def parallel_map_reduce(function, data, mapper, reducer=None, n_threads=7, backend="shared_array", chunk_size=50):
+def parallel_map_reduce(function, data: Tuple, mapper: Iterable, reducer=None, n_threads=7, backend="shared_array", chunk_size=50):
     assert reducer is None or isinstance(reducer, Reducer)
     assert isinstance(mapper, Iterable), "Mapper must be iterable"
     assert isinstance(data, tuple)
@@ -182,7 +182,6 @@ def parallel_map_reduce(function, data, mapper, reducer=None, n_threads=7, backe
 
     #for result in pool.imap(function, mapper):
     for i, result in enumerate(chunked_imap(pool, function, mapper, chunk_size=chunk_size)):
-        logging.info("Result %d returned" % i)
         if reducer is not None:
             assert result is not None
             reducer.add_result(result)

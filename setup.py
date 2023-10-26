@@ -12,7 +12,7 @@ class build_ext(_build_ext):
         self.include_dirs.append(numpy.get_include())
 
 setup(name='shared_memory_wrapper',
-      version='0.0.28',
+      version='0.0.29',
       description='Shared Memory Wrapper',
       url='http://github.com/ivargr/shared_memory_wrapper',
       author='Ivar Grytten',
@@ -22,7 +22,7 @@ setup(name='shared_memory_wrapper',
       zip_safe=False,
       setup_requires=["numpy", "pathos"],
       cmdclass={'build_ext':build_ext},
-      install_requires=['numpy', 'SharedArray'],
+      install_requires=['numpy', 'SharedArray', 'dill'],
       classifiers=[
             'Programming Language :: Python :: 3'
       ],

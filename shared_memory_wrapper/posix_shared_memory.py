@@ -1,7 +1,7 @@
 import logging
 import numpy as np
 from multiprocessing import shared_memory
-import pickle
+import dill as pickle
 import os
 
 _shared_data = {}

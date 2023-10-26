@@ -1,8 +1,10 @@
+import time
+
 from .object_traversal import replace_object_attributes_recursively
 from .shared_memory import array_to_shared_memory, array_from_shared_memory, random_name
 from .shared_memory import TMP_FILES_IN_SESSION, SHARED_MEMORIES_IN_SESSION
 import numpy as np
-import pickle
+import dill as pickle
 import logging
 
 
@@ -60,6 +62,7 @@ class DataBundle:
 
 
 def object_to_shared_memory(object, base_name=None, backend="shared_array"):
+    t0 = time.perf_counter()
     if base_name is None:
         base_name = random_name()
 
@@ -77,6 +80,7 @@ def object_to_shared_memory(object, base_name=None, backend="shared_array"):
     # write this new object
     data_bundle._object = new_object
     data_bundle.save()
+    #logging.info("Writing object to shared memory took %.4f sec" % (time.perf_counter()-t0))
     return base_name
 
 

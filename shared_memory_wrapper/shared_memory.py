@@ -1,5 +1,5 @@
 import random
-import pickle
+import dill as pickle
 import time
 import inspect
 import os
@@ -72,7 +72,7 @@ def get_shared_pool(n_threads=16):
     if _shared_pool is None:
         t = time.perf_counter()
         _shared_pool = Pool(n_threads)
-        logging.info("Made shared pool, took %.4f sec" % (time.perf_counter()-t))
+        logging.debug("Made shared pool, took %.4f sec" % (time.perf_counter()-t))
 
     return _shared_pool
 
@@ -82,7 +82,7 @@ def close_shared_pool():
     if _shared_pool is not None:
         _shared_pool.close()
         _shared_pool = None
-        logging.info("Closed shared pool")
+        logging.debug("Closed shared pool")
 
 
 def _get_class_init_arguments(cls):
@@ -386,6 +386,8 @@ def remove_shared_memory(name, limit_to_session=False):
     else:
         shared_memories = [s.name.decode("utf-8") for s in sa.list()]
 
+    #logging.info("All shared memories: %s" % shared_memories)
+
 
     n_deleted = 0
     for m in shared_memories:
@@ -420,6 +422,7 @@ def remove_shared_memory(name, limit_to_session=False):
 
 def remove_shared_memory_in_session():
     for name in SHARED_MEMORIES_IN_SESSION:
+        #logging.info("Removing shared memory %s" % name)
         remove_shared_memory(name, True)
 
 
@@ -462,6 +465,7 @@ def _run_numpy_based_function_on_shared_memory_arguments(function, input_argumen
         sliced_arguments.append(argument)
 
     result = function(*sliced_arguments)
+    random.seed()
     shared_memory_name = str(random.randint(0,10e15))
     to_shared_memory(SingleSharedArray(result), shared_memory_name)
     #logging.info("Interval %d-%d took %.4f sec" % (start, end, time.perf_counter()-start_time))
@@ -487,7 +491,7 @@ def run_numpy_based_function_in_parallel(function, n_threads, arguments, chunks=
             argument_id = str(np.random.randint(0, 10e15))
             t0 = time.perf_counter()
             to_shared_memory(SingleSharedArray(argument), argument_id)
-            logging.info("Time to write to shared memory: %.3f" % (time.perf_counter()-t0))
+            logging.debug("Time to write to shared memory: %.3f" % (time.perf_counter()-t0))
             new_arguments.append(argument_id)
             if array_length != 0 and array_length != argument.shape[0]:
                 logging.error("Found argument with different shape")
@@ -512,7 +516,7 @@ def run_numpy_based_function_in_parallel(function, n_threads, arguments, chunks=
         logging.debug("Using predefined chunks")
         intervals = chunks
 
-    logging.info("Will run on intervals %s" % intervals)
+    logging.debug("Will run on intervals %s" % intervals)
 
     results = []
     for result_name in pool.starmap(_run_numpy_based_function_on_shared_memory_arguments, zip(repeat(function), repeat(new_arguments), intervals)):
