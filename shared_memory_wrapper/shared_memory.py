@@ -485,10 +485,11 @@ def run_numpy_based_function_in_parallel(function, n_threads, arguments, chunks=
 
     # Put np arrays in shared memory, everything else we keep as is
     array_length = 0
+    rng = np.random.default_rng()
     for i, argument in enumerate(arguments):
         # don't split ndarrays with shape[0] == 1
         if isinstance(argument, np.ndarray) and argument.shape[0] != 1:
-            argument_id = str(np.random.randint(0, 10e15))
+            argument_id = str(rng.integers(0, 10e15))
             t0 = time.perf_counter()
             to_shared_memory(SingleSharedArray(argument), argument_id)
             logging.debug("Time to write to shared memory: %.3f" % (time.perf_counter()-t0))
