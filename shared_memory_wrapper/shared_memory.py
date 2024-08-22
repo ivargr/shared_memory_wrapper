@@ -174,7 +174,7 @@ def to_file(object, base_name=None, compress=False):
 
 def random_name():
     random_generator = random.Random()  # create new generator so seed does not affect
-    return str(random_generator.randint(0, 10e15))
+    return str(random_generator.randint(0, 1000000000000000))
 
 
 def object_to_shared_memory(object, base_name=None, backend="shared_array"):

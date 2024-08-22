@@ -1,5 +1,7 @@
 import logging
 import multiprocessing
+import time
+
 from .shared_memory_v2 import object_to_shared_memory, object_from_shared_memory
 from .shared_memory import remove_shared_memory
 from collections.abc import Iterable
@@ -176,7 +178,9 @@ def parallel_map_reduce(function, data: Tuple, mapper: Iterable, reducer=None, n
     logging.info("Putting data in shared memory")
     data = object_to_shared_memory(data, backend=backend)
     logging.info("Done putting data in shared memory")
+    t0 = time.perf_counter()
     pool = get_shared_pool(n_threads)
+    logging.debug("Time getting shared pool: %.3f" % (time.perf_counter()-t0))
 
     function = FunctionWrapper(function, data, backend=backend)
 
